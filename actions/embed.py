@@ -1,11 +1,13 @@
-from pandas import read_json, DataFrame
-from dotenv import load_dotenv
-from os.path import join, dirname
+from argparse import ArgumentParser
 from os import getenv
+from os.path import join, dirname
+
+from dotenv import load_dotenv
 from openai import OpenAI
+from pandas import read_json, DataFrame
 
 
-load_dotenv(".env")
+load_dotenv(join(dirname(dirname(__file__)), ".env"))
 
 OPENAI_API_KEY = getenv("OPENAI_API_KEY")
 
@@ -36,12 +38,18 @@ def main(month: int, year: int, file_name: str):
 
 # Main execution
 if __name__ == "__main__":
-    year = 2025
-    month = 9
+    parser = ArgumentParser(description="Embed meeting notes for a specific month/year.")
+    parser.add_argument("--year", type=int, required=True, help="Year of the meeting notes (e.g. 2025).")
+    parser.add_argument("--month", type=int, required=True, help="Month of the meeting notes as a number (e.g. 9).")
+    parser.add_argument("--notes-file", required=True, help="Path to the meeting notes JSON file.")
+    parser.add_argument("--output-file", help="Optional path for the output JSON file.")
+    args = parser.parse_args()
 
-    meeting_notes_file = "2025-09-meeting.json"
-    output_file_name = f"{year}-{month}-meeting-embed.json"
+    year = args.year
+    month = args.month
+    meeting_notes_file = args.notes_file
+    output_file_name = args.output_file or f"{year}-{month}-meeting-embed.json"
 
     output_file = main(month, year, meeting_notes_file)
 
-    DataFrame(output_file).to_json(output_file_name, orient='records')
+    DataFrame(output_file).to_json(join('embeddings', output_file_name), orient='records')
