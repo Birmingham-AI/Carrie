@@ -5,16 +5,26 @@ from os import getenv
 from openai import OpenAI
 import numpy as np
 import sys
+from pathlib import Path
+import re
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-load_dotenv(".env")
+load_dotenv(join(dirname(dirname(__file__)), ".env"))
 
 OPENAI_API_KEY = getenv("OPENAI_API_KEY")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+EMBEDDINGS_DIR = PROJECT_ROOT / "embeddings"
+BUNDLED_DIR = EMBEDDINGS_DIR / "bundled"
+BUNDLE_FILE_PATTERN = re.compile(r"^bundle-(\d+)\.json$")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-meeting_embed_file = "2025-09-meeting-embed.json"
+def get_embeddings_file():
+    existing = [BUNDLE_FILE_PATTERN.match(path.name) for path in BUNDLED_DIR.glob("bundle-*.json")]
+    indices = [int(match.group(1)) for match in existing if match]
+    return BUNDLED_DIR / f"bundle-{max(indices, default=0)}.json"
+
 
 def get_embedding(text):
     resp = client.embeddings.create(model="text-embedding-3-large", input=text)
@@ -41,7 +51,7 @@ def search_meeting_notes(query, top_k=5):
     query_embedding = get_embedding(query)
     
     # Load embedded meeting notes
-    meeting_data = read_json(meeting_embed_file, lines=True)
+    meeting_data = read_json(get_embeddings_file())
     
     # Calculate similarity scores
     results = []
@@ -49,8 +59,9 @@ def search_meeting_notes(query, top_k=5):
         similarity = cosine_similarity(query_embedding, row['embedding'])
         results.append({
             'slide': row['slide'],
-            'file_name': row['file_name'],
-            'point': row['point'],
+            'year': row['year'],
+            'month': row['month'],
+            'text': row['text'],
             'score': similarity
         })
     
@@ -74,6 +85,7 @@ if __name__ == "__main__":
     for i, result in enumerate(results, 1):
         print(f"\n{i}. [Score: {result['score']:.4f}]")
         print(f"   Slide: {result['slide']}")
-        print(f"   File: {result['file_name']}")
-        print(f"   Point: {result['point']}")
+        print(f"   Year: {result['year']}")
+        print(f"   Month: {result['month']}")
+        print(f"   Text: {result['text']}")
 

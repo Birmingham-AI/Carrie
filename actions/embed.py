@@ -19,18 +19,29 @@ def get_embedding(text):
     resp = client.embeddings.create(model="text-embedding-3-large", input=text)
     return resp.data[0].embedding
 
-def main(month: int, year: int, file_name: str):
+def main(month: int, year: int, file_name: str, point_summary: bool = False):
     meeting_notes = read_json(file_name)
     output = []
     for index, row in meeting_notes.iterrows():
-        for point in row['points']:
-            embedding = get_embedding(point)
 
+        if point_summary:
+            for point in row['points']:
+                embedding = get_embedding(point)
+
+                output.append({
+                    'year': year,
+                    'month': month,
+                    'slide': row['slide'],
+                    'text': point,
+                    'embedding': embedding
+                })
+        else:
+            embedding = get_embedding(row['text'])
             output.append({
                 'year': year,
                 'month': month,
-                'slide': row['slide'],
-                'point': point,
+                'slide': row['slide'] if 'slide' in row else row['page'],
+                'text': row['text'],
                 'embedding': embedding
             })
 
@@ -42,6 +53,7 @@ if __name__ == "__main__":
     parser.add_argument("--year", type=int, required=True, help="Year of the meeting notes (e.g. 2025).")
     parser.add_argument("--month", type=int, required=True, help="Month of the meeting notes as a number (e.g. 9).")
     parser.add_argument("--notes-file", required=True, help="Path to the meeting notes JSON file.")
+    parser.add_argument("--point-summary", action="store_true", help="Set to include embeddings of each point in the JSON.")
     parser.add_argument("--output-file", help="Optional path for the output JSON file.")
     args = parser.parse_args()
 
@@ -49,7 +61,8 @@ if __name__ == "__main__":
     month = args.month
     meeting_notes_file = args.notes_file
     output_file_name = args.output_file or f"{year}-{month}-meeting-embed.json"
+    point_summary = args.point_summary
 
-    output_file = main(month, year, meeting_notes_file)
+    output_file = main(month, year, meeting_notes_file, point_summary)
 
     DataFrame(output_file).to_json(join('embeddings', output_file_name), orient='records')
