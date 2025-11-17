@@ -33,7 +33,7 @@ def get_embeddings_file():
 
 
 def get_embedding(text):
-    resp = client.embeddings.create(model="text-embedding-3-large", input=text)
+    resp = client.embeddings.create(model="text-embedding-3-small", input=text)
     return resp.data[0].embedding
 
 def cosine_similarity(vec1, vec2):
