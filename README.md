@@ -1,4 +1,4 @@
-# will.a.i.am
+# will*AI*am
 
 Internal RAG playground for answering **“has this topic been talked about?”** from meeting notes, slide summaries, and livestream transcripts.
 
@@ -6,8 +6,8 @@ Internal RAG playground for answering **“has this topic been talked about?”*
 
 1. **Sync the repo**
    ```bash
-   git clone <repo-url> will.a.i.am   # or cd into the repo and run `git pull`
-   cd will.a.i.am
+   git clone <repo-url> will.ai.am   # or cd into the repo and run `git pull`
+   cd will.ai.am
    ```
 
 2. **Create/activate a virtual environment (optional but recommended)**
