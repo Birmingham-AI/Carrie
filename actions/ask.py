@@ -7,6 +7,7 @@ import numpy as np
 import sys
 from pathlib import Path
 import re
+from typing import List, Dict
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -23,7 +24,12 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 def get_embeddings_file():
     existing = [BUNDLE_FILE_PATTERN.match(path.name) for path in BUNDLED_DIR.glob("bundle-*.json")]
     indices = [int(match.group(1)) for match in existing if match]
-    return BUNDLED_DIR / f"bundle-{max(indices, default=0)}.json"
+    bundle_path = BUNDLED_DIR / f"bundle-{max(indices, default=0)}.json"
+    if not bundle_path.exists():
+        raise FileNotFoundError(
+            "No bundled embeddings found. Run actions/bundle.py to create one."
+        )
+    return bundle_path
 
 
 def get_embedding(text):
@@ -70,6 +76,41 @@ def search_meeting_notes(query, top_k=5):
     
     return results[:top_k]
 
+
+def synthesize_answer(question: str, results: List[Dict]) -> str:
+    """Use GPT to craft a conversational answer grounded in retrieved notes."""
+    if not results:
+        return "I couldn't find anything in the meeting notes that answers that yet."
+
+    context_lines = []
+    for idx, result in enumerate(results, start=1):
+        context_lines.append(
+            f"{idx}. Year: {result['year']}, Month: {result['month']}, Slide: {result['slide']}\n"
+            f"Summary: {result['text']}"
+        )
+
+    system_prompt = (
+        "You read meeting-note snippets and answer the user's question. "
+        "Be conversational but concise. Cite the year and month whenever you "
+        "mention a supporting point (format 'Discussed in YEAR/MONTH'). If the "
+        "notes don't address the question, say that plainly."
+    )
+
+    user_content = (
+        f"Question: {question}\n\nRelevant notes:\n" + "\n\n".join(context_lines)
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        temperature=0.2,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+    )
+
+    return completion.choices[0].message.content.strip()
+
 # Main execution
 if __name__ == "__main__":
     print("Meeting Notes Search")
@@ -78,9 +119,19 @@ if __name__ == "__main__":
     query = input("\nEnter your question: ")
     
     print(f"\nSearching for: {query}\n")
-    results = search_meeting_notes(query)
-    
-    print("Top Results:")
+    try:
+        results = search_meeting_notes(query)
+    except FileNotFoundError as exc:
+        print(str(exc))
+        raise SystemExit(1)
+
+    answer = synthesize_answer(query, results)
+
+    print("Answer:")
+    print("-" * 50)
+    print(answer)
+
+    print("\nSupporting results:")
     print("-" * 50)
     for i, result in enumerate(results, 1):
         print(f"\n{i}. [Score: {result['score']:.4f}]")
