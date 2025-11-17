@@ -20,3 +20,4 @@
 | host somewhere | NOT STARTED | need to convert from cli tool to api call? |
 | create database/store for storing chat history | NOT STARTED | idea is to give admins insight to what people are asking |
 | create user query upload task | NOT STARTED | take user query, summarize and tag, upload to aforementioned db |
+| update bundled embeddings with meeting name and input type | NOT STARTED | would give output with flags for the breakouts as well as if it was in a slide or from the speaker |

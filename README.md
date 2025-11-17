@@ -2,6 +2,46 @@
 
 Internal RAG playground for answering **“has this topic been talked about?”** from meeting notes, slide summaries, and livestream transcripts.
 
+## Getting Started (fresh clone → question)
+
+1. **Sync the repo**
+   ```bash
+   git clone <repo-url> will.a.i.am   # or cd into the repo and run `git pull`
+   cd will.a.i.am
+   ```
+
+2. **Create/activate a virtual environment (optional but recommended)**
+   ```bash
+   py -m venv .venv
+   .venv\\Scripts\\activate  # Windows PowerShell
+   ```
+
+3. **Install Python dependencies**
+   ```bash
+   py -m pip install -r requirements.txt
+   ```
+
+4. **Configure secrets**
+   - Copy `.env.example` to `.env` if it exists, or create `.env` manually.
+   - Add `OPENAI_API_KEY=sk-...` (the scripts use `gpt-4o-mini` + `text-embedding-3-large`).
+
+5. **Prepare embeddings**
+   - Drop the latest meeting notes into `sources/{year}-{month}-meeting.json`.
+   - Embed them:
+     ```bash
+     py -m actions.embed --year 2025 --month 10 --notes-file sources/2025-10-meeting.json
+     ```
+   - Bundle (creates/updates `embeddings/bundled/bundle-{n}.json`):
+     ```bash
+     py -m actions.bundle
+     ```
+
+6. **Ask a question**
+   ```bash
+   py -m actions.ask
+   ```
+   Enter your prompt when asked; the tool returns a conversational answer plus the supporting rows.
+
 ## Project Structure
 
 - `sources/` – raw meeting notes (`{year}-{month}-meeting.json`).
@@ -13,9 +53,9 @@ Internal RAG playground for answering **“has this topic been talked about?”*
 
 ## Prerequisites
 
-1. **Python 3.12+** (repo was built/tested with `py` launcher on Windows).
-2. `pip install -r requirements.txt` (or install `pandas`, `python-dotenv`, `numpy`, `openai`).
-3. Create `.env` in the repo root with `OPENAI_API_KEY=...`.
+- **Python 3.12+** (repo was built/tested with `py` launcher on Windows).
+- `pip install -r requirements.txt` installs everything needed (`pandas`, `python-dotenv`, `numpy`, `openai`).
+- `.env` in the repo root with `OPENAI_API_KEY=...`.
 
 ## Typical Workflow
 
@@ -65,4 +105,3 @@ Internal RAG playground for answering **“has this topic been talked about?”*
 - Automate bundling after every embed.
 - Add streaming/GUI front-end for `actions.ask`.
 - Explore LangChain or other frameworks for more advanced retrieval flows once the current pipeline feels limiting.
-
