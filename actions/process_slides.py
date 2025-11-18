@@ -71,9 +71,24 @@ def process_slides(pdf_path):
                 try:
                     content = json.loads(response['message']['content'])
                     
-                    # Add metadata
+                    # Extract text from analysis for compatibility with embed.py
+                    # Combine slide title and key points into a single text field
+                    text_parts = []
+                    if isinstance(content, dict):
+                        if 'slide_title' in content and content['slide_title']:
+                            text_parts.append(content['slide_title'])
+                        if 'slide_analysis' in content and isinstance(content['slide_analysis'], list):
+                            for item in content['slide_analysis']:
+                                if isinstance(item, dict) and 'key_point' in item:
+                                    text_parts.append(item['key_point'])
+                    
+                    # Fallback: if we can't extract structured text, use the raw text from the page
+                    text = '\n'.join(text_parts) if text_parts else text
+                    
+                    # Add metadata with text field for embed.py compatibility
                     slide_result = {
                         "page": page_num,
+                        "text": text,
                         "analysis": content
                     }
                     all_slides_data.append(slide_result)
