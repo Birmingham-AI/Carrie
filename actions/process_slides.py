@@ -32,69 +32,68 @@ def process_slides(pdf_path):
     json_filename = pdf_filename.replace(".pdf", ".json")
     json_path = os.path.join(OUTPUT_DIR, json_filename)
     
-    # Open the PDF
+    # Open the PDF using context manager to ensure proper cleanup
     try:
-        doc = fitz.open(pdf_path)
+        with fitz.open(pdf_path) as doc:
+            all_slides_data = []
+
+            # Iterate through pages
+            for page_num, page in enumerate(doc, start=1):
+                start_time = time.time()
+                
+                # Extract text
+                text = page.get_text()
+                
+                # Skip empty pages
+                if not text.strip():
+                    print(f"  Skipping Page {page_num} (Empty)")
+                    continue
+
+                print(f"  Processing Page {page_num}...", end=" ", flush=True)
+
+                # Call Ollama
+                response = ollama.chat(
+                    model=MODEL,
+                    format='json',  # Enforce JSON mode
+                    messages=[
+                        {
+                            'role': 'system',
+                            'content': "You are a helper that analyzes slide text and outputs strict JSON."
+                        },
+                        {
+                            'role': 'user',
+                            'content': f"{PROMPT_TEXT}\n\nFILE NAME: {pdf_filename}\n\nCONTEXT:\n{text}"
+                        },
+                    ]
+                )
+
+                # Parse JSON content
+                try:
+                    content = json.loads(response['message']['content'])
+                    
+                    # Add metadata
+                    slide_result = {
+                        "page": page_num,
+                        "analysis": content
+                    }
+                    all_slides_data.append(slide_result)
+                    
+                    elapsed = time.time() - start_time
+                    print(f"Done ({elapsed:.2f}s)")
+
+                except json.JSONDecodeError:
+                    print(f"Failed to parse JSON for page {page_num}")
+
+            # Save complete results to a file
+            os.makedirs(OUTPUT_DIR, exist_ok=True)
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(all_slides_data, f, indent=2)
+            
+            print(f"  Saved analysis for {len(all_slides_data)} slides to '{json_path}'")
+            return len(all_slides_data)
     except Exception as e:
         print(f"Error opening PDF {pdf_path}: {e}")
         return 0
-
-    all_slides_data = []
-
-    # Iterate through pages
-    for page_num, page in enumerate(doc, start=1):
-        start_time = time.time()
-        
-        # Extract text
-        text = page.get_text()
-        
-        # Skip empty pages
-        if not text.strip():
-            print(f"  Skipping Page {page_num} (Empty)")
-            continue
-
-        print(f"  Processing Page {page_num}...", end=" ", flush=True)
-
-        # Call Ollama
-        response = ollama.chat(
-            model=MODEL,
-            format='json',  # Enforce JSON mode
-            messages=[
-                {
-                    'role': 'system',
-                    'content': "You are a helper that analyzes slide text and outputs strict JSON."
-                },
-                {
-                    'role': 'user',
-                    'content': f"{PROMPT_TEXT}\n\nFILE NAME: {pdf_filename}\n\nCONTEXT:\n{text}"
-                },
-            ]
-        )
-
-        # Parse JSON content
-        try:
-            content = json.loads(response['message']['content'])
-            
-            # Add metadata
-            slide_result = {
-                "page": page_num,
-                "analysis": content
-            }
-            all_slides_data.append(slide_result)
-            
-            elapsed = time.time() - start_time
-            print(f"Done ({elapsed:.2f}s)")
-
-        except json.JSONDecodeError:
-            print(f"Failed to parse JSON for page {page_num}")
-
-    # Save complete results to a file
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(all_slides_data, f, indent=2)
-    
-    print(f"  Saved analysis for {len(all_slides_data)} slides to '{json_path}'")
-    return len(all_slides_data)
 
 def main():
     """Main function to process all PDFs in the slides directory."""
