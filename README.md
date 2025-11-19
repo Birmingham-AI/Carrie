@@ -54,7 +54,7 @@ Internal RAG playground for answering **“has this topic been talked about?”*
 
 - `slides/` – PDF slide decks to process.
 - `sources/` – raw meeting notes (`{year}-{month}-meeting.json`) and processed slide JSON files.
-- `actions/process_slides.py` – processes PDF files from `slides/` directory, extracts key points using Ollama, and saves JSON to `sources/`.
+- `actions/process_slides.py` – processes PDF files from `slides/` directory, extracts key points using OpenAI (`gpt-4o-mini`), and saves JSON to `sources/`.
 - `actions/embed.py` – CLI to embed a notes file and save to `embeddings/`.
 - `embeddings/` – per-meeting embedding JSON (`{year}-{month}-meeting-embed.json`).
 - `actions/bundle.py` – gathers all per-meeting files and writes `embeddings/bundled/bundle-{n}.json`.
@@ -65,8 +65,7 @@ Internal RAG playground for answering **“has this topic been talked about?”*
 
 - **Python 3.12+** (repo was built/tested with `py` launcher on Windows).
 - `pip install -r requirements.txt` installs everything needed (`pandas`, `python-dotenv`, `numpy`, `openai`, `ollama`, `PyMuPDF`).
-- `.env` in the repo root with `OPENAI_API_KEY=...` (for embedding/search).
-- **Ollama** installed and running locally (required for `process_slides.py`). The script uses the `gemma3:4b` model, which will be pulled automatically on first use.
+- `.env` in the repo root with `OPENAI_API_KEY=...` (for for embedding, search, and slide processing).
 
 ## Typical Workflow
 
@@ -77,7 +76,7 @@ Internal RAG playground for answering **“has this topic been talked about?”*
    ```
 
    - Processes all PDF files in the `slides/` directory.
-   - Extracts key points from each slide using Ollama (`gemma3:4b` model).
+   - Extracts key points from each slide using OpenAI (`gpt-4o-mini` model).
    - Saves JSON files to `sources/` with the same name as the PDF (e.g., `presentation.pdf` → `sources/presentation.json`).
    - Each output file contains an array of slide data with `page` and `analysis` fields.
    - Empty pages are automatically skipped.
@@ -124,7 +123,6 @@ Internal RAG playground for answering **“has this topic been talked about?”*
 - **`FileNotFoundError` when running ask** – no `embeddings/bundled/bundle-*.json` yet; run `py -m actions.bundle` after producing embeddings.
 - **`unrecognized arguments: False`** – boolean CLI flags use `--flag` for true (set via `action='store_true'`). Pass `--point-summary` without `True/False`.
 - **OpenAI errors** – confirm API key in `.env` and that the `gpt-4o-mini` + `text-embedding-3-large` models are enabled for the provided key.
-- **Ollama errors when processing slides** – ensure Ollama is installed and running locally. The `gemma3:4b` model will be pulled automatically on first use, but you can pre-download it with `ollama pull gemma3:4b`.
 - **No PDF files found** – ensure PDF files are placed in the `slides/` directory (not `sources/`).
 
 ## Future Ideas
