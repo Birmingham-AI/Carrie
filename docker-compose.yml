@@ -22,7 +22,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - willaim-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: willaim-frontend
+    ports:
+      - "5174:5173"
+    env_file:
+      - .env
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8001
+    volumes:
+      # Mount source for hot reload
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - willaim-network
 
 networks:
-  default:
-    name: willaim-network
+  willaim-network:
+    driver: bridge
