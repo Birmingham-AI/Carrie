@@ -1,132 +1,207 @@
 # will*AI*am
 
-Internal RAG playground for answering **“has this topic been talked about?”** from meeting notes, slide summaries, and livestream transcripts.
+Internal RAG playground for answering **"has this topic been talked about?"** from meeting notes, slide summaries, and livestream transcripts.
 
-## Getting Started (fresh clone → question)
+## Demo
 
-1. **Sync the repo**
+<img src="chat.gif" width="800" />
+
+## Quick Start
+
+1. **Clone and configure**
    ```bash
-   git clone <repo-url> will.ai.am   # or cd into the repo and run `git pull`
-   cd will.ai.am
+   git clone https://github.com/Birmingham-AI/willAIam.git
+   cd willAIam
    ```
 
-2. **Create/activate a virtual environment (optional but recommended)**
-   ```bash
-   py -m venv .venv
-   .venv\\Scripts\\activate  # Windows PowerShell
-   ```
-
-3. **Install Python dependencies**
-   ```bash
-   py -m pip install -r requirements.txt
-   ```
-
-4. **Configure secrets**
-   - Copy `.env.example` to `.env` if it exists, or create `.env` manually.
-   - Add `OPENAI_API_KEY=sk-...` (the scripts use `gpt-4o-mini` + `text-embedding-3-large`).
-
-5. **Process slides (if working with PDF slide decks)**
-   - Place PDF files in the `slides/` directory.
-   - Process them to extract key points:
-     ```bash
-     py -m actions.process_slides
+2. **Set up environment**
+   - Copy `.env.example` to `.env` (or create `.env` manually)
+   - Add your OpenAI API key:
      ```
-   - This creates JSON files in `sources/` (one per PDF) with slide analysis.
-
-6. **Prepare embeddings**
-   - Drop the latest meeting notes into `sources/{year}-{month}-meeting.json`, or use the JSON files generated from slide processing.
-   - Embed them:
-     ```bash
-     py -m actions.embed --year 2025 --month 10 --notes-file sources/2025-10-meeting.json
-     ```
-   - Bundle (creates/updates `embeddings/bundled/bundle-{n}.json`):
-     ```bash
-     py -m actions.bundle
+     OPENAI_API_KEY=sk-...
      ```
 
-7. **Ask a question**
+3. **Start the application**
+  For docker:
    ```bash
-   py -m actions.ask
+   docker-compose up -d
    ```
-   Enter your prompt when asked; the tool returns a conversational answer plus the supporting rows.
+
+  For podman:
+   ```bash
+   python -m podman_compose up -d
+   ```
+
+   - Frontend: http://localhost:5174
+   - Backend API: http://localhost:8001
+   - API docs: http://localhost:8001/docs
+
+4. **Ask questions!**
+   - Open http://localhost:5174 in your browser
+   - Type your question in the chat interface
+   - Get AI-generated answers based on Birmingham AI meeting history
 
 ## Project Structure
 
-- `slides/` – PDF slide decks to process.
-- `sources/` – raw meeting notes (`{year}-{month}-meeting.json`) and processed slide JSON files.
-- `actions/process_slides.py` – processes PDF files from `slides/` directory, extracts key points using OpenAI (`gpt-4o-mini`), and saves JSON to `sources/`.
-- `actions/embed.py` – CLI to embed a notes file and save to `embeddings/`.
-- `embeddings/` – per-meeting embedding JSON (`{year}-{month}-meeting-embed.json`).
-- `actions/bundle.py` – gathers all per-meeting files and writes `embeddings/bundled/bundle-{n}.json`.
-- `actions/ask.py` – CLI search assistant that answers a question and cites where/when it was addressed.
-- `embed_meeting_notes.py` – legacy helper if you need the older flow.
+```
+willAIam/
+├── backend/                    # FastAPI backend service
+│   ├── app.py                 # Main API application
+│   ├── services/
+│   │   └── rag_service.py     # RAG logic (search, embedding, synthesis)
+│   ├── actions/               # Data processing pipeline (CLI tools)
+│   │   ├── process_slides.py  # Extract key points from PDF slides
+│   │   ├── embed.py           # Generate embeddings from meeting notes
+│   │   ├── bundle.py          # Combine embeddings for search
+│   │   └── ask.py             # CLI question interface
+│   ├── tests/                 # Backend tests
+│   ├── Dockerfile             # Backend container definition
+│   └── requirements.txt       # Python dependencies
+├── frontend/                  # React frontend application
+│   ├── src/
+│   │   ├── components/        # React components
+│   │   ├── services/          # API service layer
+│   │   └── App.tsx            # Main application component
+│   ├── Dockerfile             # Frontend container definition
+│   └── package.json           # Node.js dependencies
+├── slides/                    # PDF slide decks to process
+├── sources/                   # Meeting notes JSON files
+├── embeddings/                # Generated embeddings
+│   └── bundled/              # Bundled embeddings for search
+├── docker-compose.yml         # Service orchestration
+└── .env                       # Environment variables (create from .env.example)
+```
 
 ## Prerequisites
 
-- **Python 3.12+** (repo was built/tested with `py` launcher on Windows).
-- `pip install -r requirements.txt` installs everything needed (`pandas`, `python-dotenv`, `numpy`, `openai`, `ollama`, `PyMuPDF`).
-- `.env` in the repo root with `OPENAI_API_KEY=...` (for for embedding, search, and slide processing).
+- **Docker & Docker Compose** (recommended for easiest setup)
+- **OR** for local development:
+  - Python 3.12+
+  - Node.js 18+
+  - OpenAI API key
 
-## Typical Workflow
+## How It Works
 
-1. **Process slide PDFs (optional)**
+### Data Pipeline
 
-   ```bash
-   py -m actions.process_slides
-   ```
+```
+PDF Slides → Extract → JSON → Embed → Bundle → Search Index
+Meeting Notes ────────┘
+```
 
-   - Processes all PDF files in the `slides/` directory.
-   - Extracts key points from each slide using OpenAI (`gpt-4o-mini` model).
-   - Saves JSON files to `sources/` with the same name as the PDF (e.g., `presentation.pdf` → `sources/presentation.json`).
-   - Each output file contains an array of slide data with `page` and `analysis` fields.
-   - Empty pages are automatically skipped.
+1. **Process slides** (optional): Extract key points from PDF slide decks
+2. **Embed notes**: Convert meeting notes/slides to vector embeddings
+3. **Bundle**: Combine all embeddings into searchable index
+4. **Query**: Ask questions via web UI, get AI-synthesized answers with citations
 
-2. **Embed a meeting's notes**
+### Architecture
 
-   ```bash
-   py -m actions.embed --year 2025 --month 10 --notes-file sources/2025-10-meeting.json \
-       --point-summary  # optional flag for per-point vs per-slide embeddings
-   ```
+- **Frontend**: React app with real-time streaming responses
+- **Backend**: FastAPI with OpenAI Agents SDK
+- **RAG Service**: Vector similarity search + GPT-4o-mini synthesis
+- **Models**: `text-embedding-3-large` for embeddings, `gpt-4o-mini` for generation
 
-   - Outputs `embeddings/2025-10-meeting-embed.json` unless `--output-file` is provided.
-   - Months can be `6` or `06`; files follow `{year}-{month}-meeting-embed.json`.
-   - Can embed both manually created meeting notes or processed slide JSON files.
+## Data Processing (Optional)
 
-3. **Bundle embeddings for search**
+If you need to add new meeting notes or process slide decks, use these CLI tools:
 
-   ```bash
-   py -m actions.bundle
-   ```
+### 1. Process PDF Slides
 
-   - Reads every `embeddings/*-meeting-embed.json` file.
-   - Adds `year` and `month` into each record.
-   - Writes `embeddings/bundled/bundle-{n}.json`, where `n` increments based on the highest existing bundled file (so deletions won't cause overwrites).
+```bash
+# Place PDFs in slides/ directory, then:
+python -m backend.actions.process_slides
+```
+- Extracts text and key points from each slide
+- Outputs JSON to `sources/` (e.g., `presentation.pdf` → `sources/presentation.json`)
 
-4. **Ask questions**
+### 2. Create Embeddings
 
-   ```bash
-   py -m actions.ask
-   ```
+```bash
+python -m backend.actions.embed --year 2025 --month 10 --notes-file sources/2025-10-meeting.json
+```
+- Generates vector embeddings from meeting notes or processed slides
+- Outputs to `embeddings/{year}-{month}-meeting-embed.json`
+- Add `--point-summary` flag for per-point embeddings instead of per-slide
 
-   - Prompts for a question, embeds it, finds the top matches from the latest bundle, then crafts a conversational answer (citing `YEAR/MONTH`) and lists the supporting rows with similarity scores.
-   - If no bundled file exists, it reminds you to run the bundler first.
+### 3. Bundle for Search
 
-## Data Expectations
+```bash
+python -m backend.actions.bundle
+```
+- Combines all embeddings in `embeddings/` directory
+- Adds year/month metadata for citations
+- Creates `embeddings/bundled/bundle-{n}.json` with auto-incrementing index
 
-- **Slide processing output**: JSON files from `process_slides.py` are arrays of objects with `page` (page number) and `analysis` (containing slide analysis with `file_name`, `slide_title`, `slide_analysis`, etc.).
-- **Meeting JSON files**: Should be arrays of objects where each entry contains at least `slide` (or `point`), `text`, maybe `summary`. The embedding CLI will preserve whatever fields exist plus `embedding`.
-- **Bundled files**: Keep the same structure as the original entries with two added keys: `year` and `month`.
-- Downstream tooling assumes UTF-8 JSON; avoid NDJSON (the scripts now read/write standard arrays).
+## Development
+
+### Local Backend Setup
+
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # macOS/Linux
+.venv\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Run backend
+cd backend
+uvicorn app:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Local Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## API Endpoints
+
+- `POST /api/ask` - Server-Sent Events streaming responses
+- `GET /api/search` - Vector similarity search only (no synthesis)
+- `GET /` - Health check
+
+Full API documentation: http://localhost:8001/docs
+
+## Data Format
+
+### Meeting Notes JSON
+```json
+[
+  {
+    "slide": 1,
+    "text": "Discussion about RAG systems...",
+    "summary": "Overview of retrieval-augmented generation"
+  }
+]
+```
+
+### Embedding Output
+```json
+[
+  {
+    "year": 2025,
+    "month": 10,
+    "slide": 1,
+    "text": "Discussion about RAG systems...",
+    "embedding": [0.123, -0.456, ...]
+  }
+]
+```
 
 ## Troubleshooting
 
-- **`FileNotFoundError` when running ask** – no `embeddings/bundled/bundle-*.json` yet; run `py -m actions.bundle` after producing embeddings.
-- **`unrecognized arguments: False`** – boolean CLI flags use `--flag` for true (set via `action='store_true'`). Pass `--point-summary` without `True/False`.
-- **OpenAI errors** – confirm API key in `.env` and that the `gpt-4o-mini` + `text-embedding-3-large` models are enabled for the provided key.
-- **No PDF files found** – ensure PDF files are placed in the `slides/` directory (not `sources/`).
+- **No answers returned**: Ensure embeddings are bundled (`python -m backend.actions.bundle`)
+- **OpenAI API errors**: Check `.env` file has valid `OPENAI_API_KEY`
+- **Docker issues**: Run `docker-compose down && docker-compose up --build`
+- **Frontend can't connect**: Ensure backend is running on port 8000
 
-## Future Ideas
+## Technologies
 
-- Automate bundling after every embed.
-- Add streaming/GUI front-end for `actions.ask`.
-- Explore LangChain or other frameworks for more advanced retrieval flows once the current pipeline feels limiting.
+- **Backend**: FastAPI, OpenAI Agents SDK, NumPy, Pandas
+- **Frontend**: React, TypeScript, Tailwind CSS
+- **AI**: OpenAI GPT-4o-mini, text-embedding-3-large
+- **Infrastructure**: Docker, Docker Compose
