@@ -1,9 +1,10 @@
 import asyncio
+import os
 import uuid
 import logging
 from typing import Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 
 from models import YouTubeUploadRequest, YouTubeUploadResponse, JobStatusResponse
 from clients import get_supabase, check_supabase_configured
@@ -14,6 +15,30 @@ logger = logging.getLogger(__name__)
 
 # In-memory job tracking (for simplicity; use Redis/DB for production)
 upload_jobs: Dict[str, Dict] = {}
+
+
+def verify_api_key(x_api_key: str = Header(None)):
+    """Verify the API key for protected endpoints."""
+    expected_key = os.getenv("UPLOAD_API_KEY")
+    if not expected_key:
+        raise HTTPException(
+            status_code=500,
+            detail="UPLOAD_API_KEY not configured on server"
+        )
+    if not x_api_key or x_api_key != expected_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key"
+        )
+
+
+@router.post("/verify-key", dependencies=[Depends(verify_api_key)])
+async def verify_key():
+    """
+    Verify if the provided API key is valid.
+    Returns 200 if valid, 401 if invalid.
+    """
+    return {"valid": True}
 
 
 async def process_youtube_upload(job_id: str, request: YouTubeUploadRequest):
@@ -116,7 +141,7 @@ async def process_youtube_upload(job_id: str, request: YouTubeUploadRequest):
         }
 
 
-@router.post("/upload", response_model=YouTubeUploadResponse)
+@router.post("/upload", response_model=YouTubeUploadResponse, dependencies=[Depends(verify_api_key)])
 async def upload_youtube(request: YouTubeUploadRequest):
     """
     Upload a YouTube video for transcription and embedding.
@@ -227,7 +252,7 @@ async def list_youtube_sources():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/sources/{source_id}")
+@router.delete("/sources/{source_id}", dependencies=[Depends(verify_api_key)])
 async def delete_youtube_source(source_id: str):
     """
     Delete a YouTube source and its associated embeddings.
