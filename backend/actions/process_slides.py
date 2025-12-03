@@ -18,7 +18,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # Configuration
 SLIDES_DIR = "slides"
 OUTPUT_DIR = "sources"
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-4.1-mini"
 
 # The Prompt
 PROMPT_TEXT = """

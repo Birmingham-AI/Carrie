@@ -17,13 +17,13 @@ set_tracing_disabled(True)
 class StreamingMeetingNotesAgent:
     """Agent that streams conversational answers about meeting notes using RAG"""
 
-    def __init__(self, rag_service, model: str = "gpt-4o-mini", enable_web_search: bool = True):
+    def __init__(self, rag_service, model: str = "gpt-4.1-mini", enable_web_search: bool = True):
         """
         Initialize the streaming agent
 
         Args:
             rag_service: RAGService instance to use for searching notes
-            model: OpenAI model to use (default: gpt-4o-mini)
+            model: OpenAI model to use (default: gpt-4.1-mini)
             enable_web_search: Whether to enable web search tool (default: True)
         """
         self.rag_service = rag_service
@@ -33,8 +33,10 @@ class StreamingMeetingNotesAgent:
             "You are a helpful assistant that answers questions about Birmingham AI community meeting notes. "
             "Use the search_meeting_notes tool to find relevant information from past meetings. "
             "If the meeting notes don't have enough information, you can use web_search to find additional context. "
-            "Be conversational but concise. Always cite the session info and include the timestamp URL when mentioning information from meetings "
-            "(format: 'Discussed in [session_info](timestamp_url)'). When citing web sources, mention the source."
+            "Be conversational but concise. Don't hallucinate. Don't make up answers. If you don't know the answer, say so. Always give grounded answers."
+            "IMPORTANT: Only cite sources that DIRECTLY answer the question. Do not include sources just because they appeared in search results. "
+            "If only one source is relevant, only cite that one. Quality over quantity. "
+            "Include the YouTube timestamp URL at the end of your response."
         )
 
     def _create_search_tool(self):

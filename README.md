@@ -24,6 +24,9 @@ RAG-powered knowledge base for the Birmingham AI community. Ask questions about 
    # Required for YouTube transcription and vector search
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_KEY=your-service-role-key
+
+   # Required for YouTube upload protection
+   UPLOAD_API_KEY=your-secret-key
    ```
 
 3. **Initialize Supabase database**
@@ -104,10 +107,11 @@ willAIam/
 - `GET /api/search?question=...&top_k=5` - Vector search only
 
 ### YouTube
-- `POST /api/youtube/upload` - Start transcription job
+- `POST /api/youtube/verify-key` - Verify API key (requires `X-API-Key` header)
+- `POST /api/youtube/upload` - Start transcription job (requires `X-API-Key` header)
 - `GET /api/youtube/status/{job_id}` - Check job status
 - `GET /api/youtube/sources` - List processed videos
-- `DELETE /api/youtube/sources/{id}` - Delete video and embeddings
+- `DELETE /api/youtube/sources/{id}` - Delete video and embeddings (requires `X-API-Key` header)
 
 ### Health
 - `GET /` - Health check
@@ -131,6 +135,7 @@ python -m backend.actions.transcribe_youtube \
 ```bash
 curl -X POST http://localhost:8001/api/youtube/upload \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
   -d '{"url": "VIDEO_URL", "session_info": "Session Name"}'
 ```
 
