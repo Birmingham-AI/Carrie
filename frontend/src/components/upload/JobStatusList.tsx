@@ -5,7 +5,7 @@ export interface JobStatus {
   job_id: string;
   status: 'processing' | 'completed' | 'failed';
   message: string;
-  video_id?: string;
+  source_id?: string;
   chunk_count?: number;
   error?: string;
 }
@@ -60,8 +60,8 @@ const JobStatusList: React.FC<JobStatusListProps> = ({ jobs, onDismiss }) => {
                 )}
               </div>
               <p className="text-gray-600 text-xs mt-1 truncate">{job.message}</p>
-              {job.video_id && (
-                <p className="text-gray-500 text-xs mt-1">ID: {job.video_id}</p>
+              {job.source_id && (
+                <p className="text-gray-500 text-xs mt-1">ID: {job.source_id}</p>
               )}
               {job.chunk_count !== undefined && (
                 <p className="text-gray-500 text-xs">Chunks: {job.chunk_count}</p>

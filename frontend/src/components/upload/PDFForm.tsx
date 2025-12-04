@@ -4,7 +4,7 @@ import config from '../../config';
 
 interface PDFFormProps {
   apiKey: string;
-  onJobStarted: (job: { job_id: string; status: string; message: string; video_id?: string }) => void;
+  onJobStarted: (job: { job_id: string; status: string; message: string; source_id?: string }) => void;
   onAuthError: () => void;
 }
 
@@ -63,7 +63,7 @@ const PDFForm: React.FC<PDFFormProps> = ({ apiKey, onJobStarted, onAuthError }) 
         job_id: data.job_id,
         status: 'processing',
         message: data.message,
-        video_id: file.name,
+        source_id: file.name,
       });
 
       setFile(null);

@@ -4,7 +4,7 @@ import config from '../../config';
 
 interface YouTubeFormProps {
   apiKey: string;
-  onJobStarted: (job: { job_id: string; status: string; message: string; video_id?: string }) => void;
+  onJobStarted: (job: { job_id: string; status: string; message: string; source_id?: string }) => void;
   onAuthError: () => void;
 }
 
@@ -54,7 +54,7 @@ const YouTubeForm: React.FC<YouTubeFormProps> = ({ apiKey, onJobStarted, onAuthE
         job_id: data.job_id,
         status: 'processing',
         message: data.message,
-        video_id: data.video_id,
+        source_id: data.source_id,
       });
 
       setUrl('');

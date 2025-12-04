@@ -24,7 +24,7 @@ async def get_job_status(job_id: str):
     - job_id: The job ID
     - status: Current status ("processing", "completed", or "failed")
     - message: Status message
-    - video_id: YouTube video ID or PDF filename (if available)
+    - source_id: YouTube video ID or PDF filename (if available)
     - chunk_count: Number of chunks processed (if completed)
     - error: Error message (if failed)
     """
@@ -39,7 +39,7 @@ async def get_job_status(job_id: str):
         job_id=job_id,
         status=job.get("status", "unknown"),
         message=job.get("message", ""),
-        video_id=job.get("source_id"),  # Keep as video_id for API compatibility
+        source_id=job.get("source_id"),
         chunk_count=job.get("chunk_count"),
         error=job.get("error")
     )

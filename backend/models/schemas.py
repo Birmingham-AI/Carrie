@@ -39,6 +39,6 @@ class JobStatusResponse(BaseModel):
     job_id: str
     status: str
     message: str
-    video_id: Optional[str] = None
+    source_id: Optional[str] = None
     chunk_count: Optional[int] = None
     error: Optional[str] = None
