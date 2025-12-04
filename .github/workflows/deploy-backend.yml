@@ -56,6 +56,10 @@ jobs:
             SUPABASE_URL=supabase-url:latest
             SUPABASE_KEY=supabase-key:latest
             UPLOAD_API_KEY=upload-api-key:latest
+            LANGFUSE_ENABLED=LANGFUSE_ENABLED:latest
+            LANGFUSE_PUBLIC_KEY=LANGFUSE_PUBLIC_KEY:latest
+            LANGFUSE_SECRET_KEY=LANGFUSE_SECRET_KEY:latest
+            LANGFUSE_BASE_URL=LANGFUSE_BASE_URL:latest
 
       - name: Show Output
         run: echo "Deployed to ${{ steps.deploy.outputs.url }}"

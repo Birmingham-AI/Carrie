@@ -118,6 +118,15 @@ class StreamingMeetingNotesAgent:
             tools=tools,
         )
 
+        # Stream events from agent
+        async def stream_events():
+            result = Runner.run_streamed(agent, input=question)
+            async for event in result.stream_events():
+                if event.type == "raw_response_event" and isinstance(
+                    event.data, ResponseTextDeltaEvent
+                ):
+                    yield event.data.delta
+
         # Run agent with Langfuse tracing if enabled
         langfuse = get_langfuse_client()
 
@@ -136,23 +145,15 @@ class StreamingMeetingNotesAgent:
                     }
                 )
 
-                result = Runner.run_streamed(agent, input=question)
                 chunks = []
-                async for event in result.stream_events():
-                    if event.type == "raw_response_event" and isinstance(
-                        event.data, ResponseTextDeltaEvent
-                    ):
-                        chunks.append(event.data.delta)
-                        yield event.data.delta
+                async for chunk in stream_events():
+                    chunks.append(chunk)
+                    yield chunk
 
                 span.update(output="".join(chunks))
         else:
-            result = Runner.run_streamed(agent, input=question)
-            async for event in result.stream_events():
-                if event.type == "raw_response_event" and isinstance(
-                    event.data, ResponseTextDeltaEvent
-                ):
-                    yield event.data.delta
+            async for chunk in stream_events():
+                yield chunk
 
     async def get_complete_answer(self, question: str) -> str:
         """

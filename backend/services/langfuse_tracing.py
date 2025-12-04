@@ -11,6 +11,9 @@ Uses both:
 
 import os
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 
 LANGFUSE_ENABLED = os.getenv("LANGFUSE_ENABLED", "false").lower() == "true"
 
@@ -46,7 +49,7 @@ def init_langfuse():
     )
 
     if not _langfuse_client.auth_check():
-        print("Warning: Langfuse authentication failed")
+        logger.warning(f"Langfuse authentication failed for {base_url}. Check LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY.")
         _langfuse_client = None
         return
 
@@ -72,7 +75,7 @@ def init_langfuse():
     # Instrument OpenAI Agents SDK
     OpenAIAgentsInstrumentor().instrument(tracer_provider=tracer_provider)
 
-    print("Langfuse tracing enabled (native SDK + OpenInference)")
+    logger.info("Langfuse tracing enabled (native SDK + OpenInference)")
 
 
 def get_langfuse_client():
