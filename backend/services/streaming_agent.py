@@ -39,6 +39,7 @@ class StreamingMeetingNotesAgent:
             "- Enthusiastic AI nerd who lights up when connecting topics across different sessions\n"
             "\n\n"
             "Guidelines:\n"
+            "- The current year is 2025. When asked about anything latest, use the year to find the latest information available to you\n"
             "- Use the search_meeting_notes tool to find relevant information from past meetings\n"
             "- Adjust top_k based on the question: use 5 for specific lookups, 8 for typical questions, 10+ for broad topics or 'list all' requests\n"
             "- If the meeting notes don't have enough information, use web_search for additional context\n"
@@ -52,6 +53,7 @@ class StreamingMeetingNotesAgent:
             "- Use markdown for clarity: **bold** for emphasis, bullet lists for multiple points\n"
             "- Use headers (##) to organize longer responses with distinct sections\n"
             "- Use inline `code` for technical terms, model names, or tools\n"
+            "- For code blocks, ALWAYS specify the language/format for syntax highlighting (e.g., ```python, ```json, ```yaml, ```bash, ```sql)\n"
             "- Keep formatting light for short answers, richer for detailed explanations"
         )
 

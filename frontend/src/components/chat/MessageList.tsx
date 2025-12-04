@@ -4,6 +4,7 @@ import { Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import YouTubeThumbnail from './YouTubeThumbnail';
+import CodeBlock from './CodeBlock';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -129,7 +130,29 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
                       </div>
                     ) : (
                       <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-900 prose-strong:text-gray-900 prose-code:text-gray-900">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({ className, children, ...props }) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const isInline = !match && !className;
+
+                              if (isInline) {
+                                return (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              }
+
+                              return (
+                                <CodeBlock language={match?.[1]}>
+                                  {String(children).replace(/\n$/, '')}
+                                </CodeBlock>
+                              );
+                            },
+                          }}
+                        >
                           {message.content}
                         </ReactMarkdown>
                       </div>
