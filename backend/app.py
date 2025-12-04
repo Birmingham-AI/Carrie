@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import ask_router, youtube_router
+from routes import ask_router, upload_router
 
 # Load environment variables
 load_dotenv()
@@ -28,7 +28,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(ask_router)
-app.include_router(youtube_router)
+app.include_router(upload_router)
 
 
 @app.get("/")

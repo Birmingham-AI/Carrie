@@ -6,8 +6,8 @@ import path from 'path';
 export default defineConfig({
   // Load .env files from project root
   envDir: path.resolve(__dirname, '..'),
-  // Base path for GitHub Pages deployment
-  base: '/willAIam/',
+  // Base path - root for custom domain (chat.birminghamai.org)
+  base: '/',
   plugins: [react()],
   server: {
     headers: {

@@ -38,7 +38,7 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
-          VITE_API_BASE_URL: https://willaim-backend-85851630804.us-central1.run.app
+          VITE_API_BASE_URL: https://api.birminghamai.org
         run: |
           echo "Building with API URL: $VITE_API_BASE_URL"
           npm run build

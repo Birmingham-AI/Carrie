@@ -45,7 +45,7 @@ class StreamingMeetingNotesAgent:
             "- Be conversational but concise. Don't hallucinate or make up answers\n"
             "- If you don't know something, be honest about it\n"
             "- IMPORTANT: Only cite sources that DIRECTLY answer the question. Quality over quantity\n"
-            "- Include the YouTube timestamp URL at the end of your response when available"
+            "- Include the timestamp(s) at the end of your response when available"
         )
 
     def _create_search_tool(self):
