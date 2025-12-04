@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Square, Plus, Globe } from 'lucide-react';
 import { MessageInputProps } from '../../types/chat';
 
@@ -14,6 +14,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onNewChat,
 }) => {
   const [enableWebSearch, setEnableWebSearch] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-focus input when loading completes
+  useEffect(() => {
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -41,6 +50,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
             {/* Message Input */}
             <textarea
+              ref={textareaRef}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}

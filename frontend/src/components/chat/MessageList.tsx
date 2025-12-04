@@ -104,9 +104,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
               message.type === 'user' ? 'flex-row-reverse' : 'flex-row'
             }`}>
               {/* Avatar */}
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                message.type === 'user' ? 'bg-blue-500' : 'bg-purple-500'
-              }`}>
+              <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-b from-gray-300 to-gray-500 shadow-md border border-gray-400/50">
                 {message.type === 'user' ? (
                   <User className="w-5 h-5 text-white" />
                 ) : (
@@ -184,7 +182,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
           {/* Loading Indicator - only show if loading and last message is not assistant (i.e., waiting for first chunk) */}
           {isLoading && messages.length > 0 && messages[messages.length - 1].type !== 'assistant' && (
             <div className="flex items-start gap-3 flex-row">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-b from-gray-300 to-gray-500 shadow-md border border-gray-400/50 flex items-center justify-center">
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div className="bg-gray-100 rounded-2xl px-4 py-3">
