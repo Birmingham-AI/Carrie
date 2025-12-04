@@ -25,10 +25,11 @@
  CREATE INDEX ON embeddings USING hnsw (embedding vector_cosine_ops);
 
 
--- Function for similarity search
+-- Function for similarity search with optional session filter
 CREATE OR REPLACE FUNCTION match_embeddings(
     query_embedding VECTOR(1536),
-    match_count INT DEFAULT 5
+    match_count INT DEFAULT 5,
+    session_filter TEXT DEFAULT NULL
   )
   RETURNS TABLE (
     id UUID,
@@ -49,6 +50,7 @@ CREATE OR REPLACE FUNCTION match_embeddings(
       1 - (e.embedding <=> query_embedding) AS similarity
     FROM embeddings e
     JOIN sources s ON e.source_id = s.id
+    WHERE session_filter IS NULL OR s.session_info ILIKE '%' || session_filter || '%'
     ORDER BY e.embedding <=> query_embedding
     LIMIT match_count;
   END;

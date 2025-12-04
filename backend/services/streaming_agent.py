@@ -6,6 +6,7 @@ using the OpenAI Agents SDK with real-time token streaming. The agent uses RAGSe
 as a tool to search meeting notes.
 """
 
+from datetime import datetime
 from openai.types.responses import ResponseTextDeltaEvent
 from agents import Agent, Runner, function_tool, WebSearchTool
 from typing import AsyncGenerator
@@ -16,13 +17,13 @@ from services.langfuse_tracing import get_langfuse_client
 class StreamingMeetingNotesAgent:
     """Agent that streams conversational answers about meeting notes using RAG"""
 
-    def __init__(self, rag_service, model: str = "gpt-4.1-mini", enable_web_search: bool = True):
+    def __init__(self, rag_service, model: str = "gpt-5-mini", enable_web_search: bool = True):
         """
         Initialize the streaming agent
 
         Args:
             rag_service: RAGService instance to use for searching notes
-            model: OpenAI model to use (default: gpt-4.1-mini)
+            model: OpenAI model to use (default: gpt-5-mini)
             enable_web_search: Whether to enable web search tool (default: True)
         """
         self.rag_service = rag_service
@@ -39,9 +40,12 @@ class StreamingMeetingNotesAgent:
             "- Enthusiastic AI nerd who lights up when connecting topics across different sessions\n"
             "\n\n"
             "Guidelines:\n"
-            "- The current year is 2025. When asked about anything latest, use the year to find the latest information available to you\n"
-            "- Use the search_meeting_notes tool to find relevant information from past meetings\n"
+            "- Users can interchange between meetups, breakouts, sessions, etc. Use these terms to find relevant information\n"
+            "- We have general meetups, breakouts, hackathons, etc. Information about these are available in the form of both pdf and youtube videos.\n"
+            "- Use the search_meeting_notes tool to find relevant information from past meetings. This tool have embeddings of both pdf and youtube videos.\n"
             "- Adjust top_k based on the question: use 5 for specific lookups, 8 for typical questions, 10+ for broad topics or 'list all' requests\n"
+            f"- The current date is {datetime.now().strftime('%d %B %Y')}. When asked about anything latest, use this month (or previous month) and term like general/breakout/hackathon etc.\n"
+            "- Do not mix up the meeting names (Engineering vs Non Profit, etc.). Only answer about the meetup that is asked for. You can give additional context from other meetups but do not mix up the meeting names.\n"
             "- If the meeting notes don't have enough information, use web_search for additional context\n"
             "- Be conversational but concise. Don't hallucinate or make up answers\n"
             "- If you don't know something, be honest about it\n"
@@ -62,20 +66,25 @@ class StreamingMeetingNotesAgent:
         rag_service = self.rag_service
 
         @function_tool
-        async def search_meeting_notes(query: str, top_k: int = 5) -> str:
+        async def search_meeting_notes(query: str, top_k: int = 5, session_filter: str = None) -> str:
             """
             Search meeting notes for relevant information.
 
             Args:
                 query: The search query
                 top_k: Number of top results to return (default: 5)
+                session_filter: Optional filter to narrow results by session name.
+                    Examples: "August 2025", "March 2025", "Breakout", "Hackathon", "General meetup".
+                    Use this when the user asks about a specific month, year, or event type.
 
             Returns:
-                Formatted search results with year, month, slide, and content
+                Formatted search results with session info, timestamp, and content
             """
-            results = await rag_service.search_meeting_notes(query, top_k)
+            results = await rag_service.search_meeting_notes(query, top_k, session_filter)
 
             if not results:
+                if session_filter:
+                    return f"No relevant meeting notes found for this query with session filter '{session_filter}'."
                 return "No relevant meeting notes found for this query."
 
             # Format results for the agent
