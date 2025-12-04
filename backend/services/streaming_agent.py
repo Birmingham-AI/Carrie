@@ -7,11 +7,10 @@ as a tool to search meeting notes.
 """
 
 from openai.types.responses import ResponseTextDeltaEvent
-from agents import Agent, Runner, set_tracing_disabled, function_tool, WebSearchTool
+from agents import Agent, Runner, function_tool, WebSearchTool
 from typing import AsyncGenerator
 
-# Disable tracing for ZDR (Zero Data Retention) organizations
-set_tracing_disabled(True)
+from services.langfuse_tracing import get_langfuse_client
 
 
 class StreamingMeetingNotesAgent:
@@ -82,13 +81,14 @@ class StreamingMeetingNotesAgent:
 
         return search_meeting_notes
 
-    async def stream_answer(self, question: str, messages: list = None) -> AsyncGenerator[str, None]:
+    async def stream_answer(self, question: str, messages: list = None, user_id: str = None) -> AsyncGenerator[str, None]:
         """
         Stream a conversational answer to a question
 
         Args:
             question: The user's question
             messages: Optional conversation history as list of {"role": "user/assistant", "content": "..."}
+            user_id: Optional user ID for tracing (e.g., client IP)
 
         Yields:
             Text chunks as they are generated
@@ -118,15 +118,41 @@ class StreamingMeetingNotesAgent:
             tools=tools,
         )
 
-        # Run agent with current question
-        result = Runner.run_streamed(agent, input=question)
+        # Run agent with Langfuse tracing if enabled
+        langfuse = get_langfuse_client()
 
-        # Stream token-by-token output
-        async for event in result.stream_events():
-            if event.type == "raw_response_event" and isinstance(
-                event.data, ResponseTextDeltaEvent
-            ):
-                yield event.data.delta
+        if langfuse:
+            with langfuse.start_as_current_span(
+                name="WillAIam Chat",
+                input=question
+            ) as span:
+                span.update_trace(
+                    user_id=user_id or "anonymous",
+                    tags=["willaim", "meeting-notes"],
+                    metadata={
+                        "model": self.model,
+                        "web_search_enabled": self.enable_web_search,
+                        "message_count": len(messages) if messages else 0
+                    }
+                )
+
+                result = Runner.run_streamed(agent, input=question)
+                chunks = []
+                async for event in result.stream_events():
+                    if event.type == "raw_response_event" and isinstance(
+                        event.data, ResponseTextDeltaEvent
+                    ):
+                        chunks.append(event.data.delta)
+                        yield event.data.delta
+
+                span.update(output="".join(chunks))
+        else:
+            result = Runner.run_streamed(agent, input=question)
+            async for event in result.stream_events():
+                if event.type == "raw_response_event" and isinstance(
+                    event.data, ResponseTextDeltaEvent
+                ):
+                    yield event.data.delta
 
     async def get_complete_answer(self, question: str) -> str:
         """

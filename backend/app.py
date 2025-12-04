@@ -4,9 +4,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routes import ask_router, upload_router
+from services.langfuse_tracing import init_langfuse
 
 # Load environment variables
 load_dotenv()
+
+# Initialize Langfuse tracing (if enabled via LANGFUSE_ENABLED env var)
+init_langfuse()
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)

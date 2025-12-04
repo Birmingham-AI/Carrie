@@ -31,6 +31,9 @@ async def ask_question(request: Request, question_request: QuestionRequest):
     rate_limiter.check_rate_limit(request)
 
     try:
+        # Get client IP for tracing
+        client_ip = request.client.host if request.client else "unknown"
+
         # Create agent with requested configuration
         agent = StreamingMeetingNotesAgent(
             rag_service,
@@ -39,9 +42,11 @@ async def ask_question(request: Request, question_request: QuestionRequest):
 
         async def generate():
             # Stream the answer from the agent with conversation history
-            async for chunk in agent.stream_answer(question_request.question, question_request.messages):
-                # Escape newlines in chunk to preserve them in SSE format
-                # SSE interprets bare newlines as message delimiters, so we encode them
+            async for chunk in agent.stream_answer(
+                question_request.question,
+                question_request.messages,
+                user_id=client_ip
+            ):
                 escaped_chunk = chunk.replace('\n', '\\n')
                 yield f"data: {escaped_chunk}\n\n"
 

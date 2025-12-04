@@ -20,9 +20,15 @@ pip install -r requirements.txt
 ```
 
 ### Environment Configuration
-Create a `.env` file from `.env.example` and add your OpenAI API key:
+Create a `.env` file from `.env.example` and configure:
 ```
 OPENAI_API_KEY=sk-...
+
+# Optional: Langfuse observability
+LANGFUSE_ENABLED=true
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
 ```
 
 ### Processing Pipeline
@@ -117,7 +123,13 @@ User question → [CLI: backend.actions.ask OR API: backend.app] → Vector sear
 - Encapsulates all RAG logic (search, embedding, synthesis)
 - Supports both streaming and non-streaming answer generation
 - Reuses same embedding and similarity logic as CLI
-- Tracing disabled for ZDR organizations
+- OpenAI SDK tracing disabled for ZDR organizations
+
+**Langfuse Tracing** (`backend/services/langfuse_tracing.py`):
+- Optional observability via Langfuse (OpenTelemetry-based)
+- Enabled via `LANGFUSE_ENABLED=true` environment variable
+- Tracks user IP as `user_id` for session analysis
+- Captures agent runs, tool calls, and token usage
 
 ### Key Modules
 
@@ -234,7 +246,7 @@ docker-compose up -d --build
 ```
 
 **Environment Variables**:
-The container requires `OPENAI_API_KEY` in the `.env` file, which is automatically loaded by docker-compose.
+The container requires `OPENAI_API_KEY` in the `.env` file, which is automatically loaded by docker-compose. Optional Langfuse variables (`LANGFUSE_ENABLED`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`) can be added for observability.
 
 **Volumes**:
 - `./embeddings:/app/embeddings:ro` - Read-only access to embeddings
