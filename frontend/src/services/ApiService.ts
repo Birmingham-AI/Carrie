@@ -64,8 +64,10 @@ class ApiService {
                   onComplete();
                   return;
                 }
+                // Unescape newlines that were escaped in the backend for SSE transport
+                const unescapedData = data.replace(/\\n/g, '\n');
                 // Send all chunks, even empty ones (might be spaces)
-                onChunk(data);
+                onChunk(unescapedData);
               }
             }
 

@@ -37,7 +37,10 @@ async def ask_question(request: QuestionRequest):
         async def generate():
             # Stream the answer from the agent with conversation history
             async for chunk in agent.stream_answer(request.question, request.messages):
-                yield f"data: {chunk}\n\n"
+                # Escape newlines in chunk to preserve them in SSE format
+                # SSE interprets bare newlines as message delimiters, so we encode them
+                escaped_chunk = chunk.replace('\n', '\\n')
+                yield f"data: {escaped_chunk}\n\n"
 
             # Send completion marker
             yield "data: [DONE]\n\n"
