@@ -5,6 +5,7 @@ from middleware import rate_limiter
 from models import QuestionRequest, SearchResult
 from services.rag_service import RAGService
 from services.streaming_agent import StreamingMeetingNotesAgent
+from utils import get_client_ip
 
 router = APIRouter(prefix="/v1", tags=["chat"])
 
@@ -31,8 +32,8 @@ async def ask_question(request: Request, question_request: QuestionRequest):
     rate_limiter.check_rate_limit(request)
 
     try:
-        # Get client IP for tracing
-        client_ip = request.client.host if request.client else "unknown"
+        # Get client IP for tracing (handles X-Forwarded-For for proxied requests)
+        client_ip = get_client_ip(request)
 
         # Create agent with requested configuration
         agent = StreamingMeetingNotesAgent(

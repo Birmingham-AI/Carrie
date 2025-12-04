@@ -2,6 +2,8 @@ import time
 from collections import defaultdict
 from fastapi import Request, HTTPException
 
+from utils import get_client_ip
+
 
 class RateLimiter:
     """
@@ -15,13 +17,6 @@ class RateLimiter:
         self.requests_per_minute = requests_per_minute
         self.window_seconds = 60
         self.requests: dict[str, list[float]] = defaultdict(list)
-
-    def _get_client_ip(self, request: Request) -> str:
-        """Extract client IP from request, checking forwarded headers."""
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-        return request.client.host if request.client else "unknown"
 
     def _cleanup_old_requests(self, client_ip: str, current_time: float) -> None:
         """Remove requests outside the sliding window."""
@@ -37,7 +32,7 @@ class RateLimiter:
         Raises:
             HTTPException: 429 if rate limit exceeded
         """
-        client_ip = self._get_client_ip(request)
+        client_ip = get_client_ip(request)
         current_time = time.time()
 
         self._cleanup_old_requests(client_ip, current_time)
