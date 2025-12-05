@@ -43,6 +43,7 @@ async def submit_feedback(feedback: FeedbackRequest):
         score_value = 1.0 if feedback.rating == 'like' else 0.0
 
         # Record score in Langfuse using create_score
+        # Note: Langfuse SDK batches and sends asynchronously in background
         langfuse.create_score(
             trace_id=feedback.trace_id,
             name="user_feedback",
@@ -50,9 +51,6 @@ async def submit_feedback(feedback: FeedbackRequest):
             comment=feedback.comment,
             data_type="NUMERIC"
         )
-
-        # Flush to ensure the score is sent
-        langfuse.flush()
 
         logger.info(f"Feedback recorded: trace={feedback.trace_id}, rating={feedback.rating}")
 
