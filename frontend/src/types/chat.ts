@@ -16,13 +16,8 @@ export interface ChatMessage {
 export interface VoiceInputProps {
   isSupported: boolean;
   isVoiceMode: boolean;
-  isRecording: boolean;
-  isPlaying: boolean;
   isConnecting: boolean;
-  userTranscript: string;
   onToggleVoiceMode: () => void;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
 }
 
 /**

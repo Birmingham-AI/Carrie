@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import voiceService, { VoiceEvent } from '../services/VoiceService';
 
+const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+
 export interface UseVoiceReturn {
   /** Whether voice is supported in this browser */
   isSupported: boolean;
@@ -49,6 +51,26 @@ export function useVoice(
   // Use refs to track accumulated values for callbacks
   const userTranscriptRef = useRef('');
   const assistantResponseRef = useRef('');
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Reset inactivity timeout
+  const resetInactivityTimeout = useCallback(() => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
+    inactivityTimeoutRef.current = setTimeout(() => {
+      console.log('Voice mode disconnected due to inactivity');
+      voiceService.disconnect();
+    }, INACTIVITY_TIMEOUT_MS);
+  }, []);
+
+  // Clear inactivity timeout
+  const clearInactivityTimeout = useCallback(() => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+  }, []);
 
   // Handle voice events
   useEffect(() => {
@@ -58,6 +80,7 @@ export function useVoice(
           setIsVoiceMode(true);
           setIsConnecting(false);
           setError(null);
+          resetInactivityTimeout();
           break;
 
         case 'disconnected':
@@ -65,10 +88,12 @@ export function useVoice(
           setIsRecording(false);
           setIsPlaying(false);
           setIsConnecting(false);
+          clearInactivityTimeout();
           break;
 
         case 'recording_started':
           setIsRecording(true);
+          clearInactivityTimeout(); // Pause timeout while recording
           // Clear previous transcripts when starting new recording
           setUserTranscript('');
           userTranscriptRef.current = '';
@@ -113,6 +138,7 @@ export function useVoice(
           if (assistantResponseRef.current && onAssistantMessage) {
             onAssistantMessage(assistantResponseRef.current);
           }
+          resetInactivityTimeout(); // Reset timeout after response completes
           break;
 
         case 'error':
@@ -127,7 +153,7 @@ export function useVoice(
     });
 
     return unsubscribe;
-  }, [onUserMessage, onAssistantMessage]);
+  }, [onUserMessage, onAssistantMessage, resetInactivityTimeout, clearInactivityTimeout]);
 
   const toggleVoiceMode = useCallback(async () => {
     if (isVoiceMode) {

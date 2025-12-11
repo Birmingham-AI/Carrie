@@ -53,12 +53,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
             {/* Message Input */}
             <textarea
               ref={textareaRef}
-              value={voiceProps?.isRecording ? voiceProps.userTranscript || 'Listening...' : inputMessage}
-              onChange={(e) => !voiceProps?.isRecording && setInputMessage(e.target.value)}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder={voiceProps?.isVoiceMode ? "Hold mic to speak, or type here..." : "Ask a question..."}
+              placeholder={voiceProps?.isVoiceMode ? "Listening... or type here" : "Ask a question..."}
               className="flex-1 py-2 px-2 bg-transparent border-none focus:outline-none resize-none min-h-[40px] max-h-[200px] text-gray-700 placeholder-gray-400"
-              disabled={isLoading || voiceProps?.isRecording}
+              disabled={isLoading}
               rows={1}
               style={{
                 height: 'auto',
@@ -71,12 +71,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
               <VoiceButton
                 isSupported={voiceProps.isSupported}
                 isVoiceMode={voiceProps.isVoiceMode}
-                isRecording={voiceProps.isRecording}
-                isPlaying={voiceProps.isPlaying}
                 isConnecting={voiceProps.isConnecting}
                 onToggleVoiceMode={voiceProps.onToggleVoiceMode}
-                onStartRecording={voiceProps.onStartRecording}
-                onStopRecording={voiceProps.onStopRecording}
               />
             )}
 
@@ -91,8 +87,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
               </button>
             )}
 
-            {/* Send Button (when not streaming) */}
-            {!isLoading && (
+            {/* Send Button (when not streaming and not in voice mode) */}
+            {!isLoading && !voiceProps?.isVoiceMode && (
               <button
                 onClick={() => handleSendMessage(enableWebSearch)}
                 disabled={!inputMessage.trim()}

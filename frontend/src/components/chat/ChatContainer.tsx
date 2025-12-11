@@ -213,13 +213,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ selectedModel = 'gpt-4o-m
           voiceProps={{
             isSupported: voice.isSupported,
             isVoiceMode: voice.isVoiceMode,
-            isRecording: voice.isRecording,
-            isPlaying: voice.isPlaying,
             isConnecting: voice.isConnecting,
-            userTranscript: voice.userTranscript,
-            onToggleVoiceMode: voice.toggleVoiceMode,
-            onStartRecording: voice.startRecording,
-            onStopRecording: voice.stopRecording
+            onToggleVoiceMode: voice.toggleVoiceMode
           } as VoiceInputProps}
         />
       </div>
