@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import { ChatMessage } from '../../types/chat';
+import { ChatMessage, VoiceInputProps } from '../../types/chat';
 import apiService from '../../services/ApiService';
+import { useVoice } from '../../hooks/useVoice';
 
 interface ChatContainerProps {
   isSidebarOpen?: boolean;
@@ -25,6 +26,34 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ selectedModel = 'gpt-4o-m
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Voice message handlers
+  const handleVoiceUserMessage = useCallback((content: string) => {
+    if (!content.trim()) return;
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+      isVoice: true
+    };
+    setMessages(prev => [...prev, userMessage]);
+  }, []);
+
+  const handleVoiceAssistantMessage = useCallback((content: string) => {
+    if (!content.trim()) return;
+    const assistantMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content,
+      timestamp: new Date().toISOString(),
+      isVoice: true
+    };
+    setMessages(prev => [...prev, assistantMessage]);
+  }, []);
+
+  // Initialize voice hook with callbacks
+  const voice = useVoice(handleVoiceUserMessage, handleVoiceAssistantMessage);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -181,6 +210,17 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ selectedModel = 'gpt-4o-m
           isLoading={isLoading}
           cancelStreaming={cancelStreaming}
           onNewChat={handleNewChat}
+          voiceProps={{
+            isSupported: voice.isSupported,
+            isVoiceMode: voice.isVoiceMode,
+            isRecording: voice.isRecording,
+            isPlaying: voice.isPlaying,
+            isConnecting: voice.isConnecting,
+            userTranscript: voice.userTranscript,
+            onToggleVoiceMode: voice.toggleVoiceMode,
+            onStartRecording: voice.startRecording,
+            onStopRecording: voice.stopRecording
+          } as VoiceInputProps}
         />
       </div>
     </div>

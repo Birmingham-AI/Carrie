@@ -9,10 +9,9 @@ class QuestionRequest(BaseModel):
 
 
 class SearchResult(BaseModel):
-    slide: int
-    year: int
-    month: int
     text: str
+    timestamp: str
+    session_info: str
     score: float
 
 

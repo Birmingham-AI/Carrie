@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Square, Plus, Globe } from 'lucide-react';
 import { MessageInputProps } from '../../types/chat';
+import VoiceButton from './VoiceButton';
 
 /**
  * Component for handling user input
@@ -12,6 +13,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   isLoading,
   cancelStreaming,
   onNewChat,
+  voiceProps
 }) => {
   const [enableWebSearch, setEnableWebSearch] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -48,15 +50,29 @@ const MessageInput: React.FC<MessageInputProps> = ({
               <Globe className="w-5 h-5" />
             </button>
 
+            {/* Voice Button */}
+            {voiceProps && (
+              <VoiceButton
+                isSupported={voiceProps.isSupported}
+                isVoiceMode={voiceProps.isVoiceMode}
+                isRecording={voiceProps.isRecording}
+                isPlaying={voiceProps.isPlaying}
+                isConnecting={voiceProps.isConnecting}
+                onToggleVoiceMode={voiceProps.onToggleVoiceMode}
+                onStartRecording={voiceProps.onStartRecording}
+                onStopRecording={voiceProps.onStopRecording}
+              />
+            )}
+
             {/* Message Input */}
             <textarea
               ref={textareaRef}
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
+              value={voiceProps?.isRecording ? voiceProps.userTranscript || 'Listening...' : inputMessage}
+              onChange={(e) => !voiceProps?.isRecording && setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Ask a question..."
+              placeholder={voiceProps?.isVoiceMode ? "Hold mic to speak, or type here..." : "Ask a question..."}
               className="flex-1 py-2 px-2 bg-transparent border-none focus:outline-none resize-none min-h-[40px] max-h-[200px] text-gray-700 placeholder-gray-400"
-              disabled={isLoading}
+              disabled={isLoading || voiceProps?.isRecording}
               rows={1}
               style={{
                 height: 'auto',

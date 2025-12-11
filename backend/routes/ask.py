@@ -74,13 +74,14 @@ async def ask_question(request: Request, question_request: QuestionRequest):
 
 
 @router.get("/search")
-async def search_notes(request: Request, question: str, top_k: int = 5):
+async def search_notes(request: Request, question: str, top_k: int = 5, session_filter: str = None):
     """
     Search meeting notes without answer synthesis.
 
     Query parameters:
     - question: The search query
     - top_k: Number of top results to return (default: 5)
+    - session_filter: Optional filter for session type or date
 
     Returns:
     - List of search results with similarity scores
@@ -88,9 +89,29 @@ async def search_notes(request: Request, question: str, top_k: int = 5):
     rate_limiter.check_rate_limit(request)
 
     try:
-        results = await rag_service.search_meeting_notes(question, top_k)
+        results = await rag_service.search_meeting_notes(question, top_k, session_filter)
         return {"results": [SearchResult(**result) for result in results]}
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get("/sessions")
+async def list_sessions(request: Request, filter: str = None):
+    """
+    List available sessions/meetings.
+
+    Query parameters:
+    - filter: Optional filter term (e.g., "November", "Engineering", "2025")
+
+    Returns:
+    - List of sessions with session_info and chunk_count
+    """
+    rate_limiter.check_rate_limit(request)
+
+    try:
+        sessions = await rag_service.list_sessions(filter)
+        return {"sessions": sessions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
