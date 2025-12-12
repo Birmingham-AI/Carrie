@@ -16,7 +16,7 @@ init_langfuse()
 logging.basicConfig(level=logging.WARNING)
 
 app = FastAPI(
-    title="willAIam Backend API",
+    title="Carrie Backend API",
     description="RAG API for Birmingham AI community meeting notes",
     version="1.0.0"
 )
@@ -42,7 +42,7 @@ async def root():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "willAIam Backend API",
+        "service": "Carrie Backend API",
         "version": "1.0.0"
     }
 

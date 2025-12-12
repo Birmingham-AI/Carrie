@@ -1,7 +1,7 @@
-# will*AI*am 
+# Carrie
 
-## What are we trying to do?  
-- build a RAG that answers Birmingham AI community questions based on previous meetings  
+## What are we trying to do?
+- build a RAG that answers Birmingham AI community questions based on previous meetings
 - tracks what people are asking  
 
 ## What do we need to make this happen?  

@@ -11,7 +11,7 @@ interface ChatContainerProps {
   selectedModel?: string;
 }
 
-const STORAGE_KEY = 'willaim_conversation_history';
+const STORAGE_KEY = 'carrie_conversation_history';
 
 const EXAMPLE_PROMPTS = [
   "How many meetings happened in Nov 2025?",

@@ -1,4 +1,4 @@
-# willAIam Backend API
+# Carrie Backend API
 
 FastAPI backend for the Birmingham AI community RAG system.
 
@@ -14,7 +14,7 @@ Returns service status and version.
 ```json
 {
   "status": "healthy",
-  "service": "willAIam Backend API",
+  "service": "Carrie Backend API",
   "version": "1.0.0"
 }
 ```

@@ -1,6 +1,6 @@
-# willAIam Frontend
+# Carrie Frontend
 
-A clean, minimal chat interface for the willAIam RAG system. Simple single-session chat with streaming responses.
+A clean, minimal chat interface for the Carrie RAG system. Simple single-session chat with streaming responses.
 
 ## Features
 
@@ -99,7 +99,7 @@ Minimal dependencies (5 total):
 
 ## API Integration
 
-Connects to willAIam backend at `/api/ask`:
+Connects to Carrie backend at `/api/ask`:
 
 ```typescript
 POST /api/ask

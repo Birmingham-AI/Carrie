@@ -92,7 +92,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
         <div className="flex flex-col items-center justify-center h-full text-center py-12">
           <Bot className="w-16 h-16 text-gray-300 mb-4" />
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">
-            Welcome to willAIam
+            Welcome to Carrie
           </h2>
           <p className="text-gray-500 max-w-md">
             Ask questions about Birmingham AI community meeting notes, slide summaries, and transcripts.

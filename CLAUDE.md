@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-will*AI*am is a RAG (Retrieval-Augmented Generation) system for the Birmingham AI community. It answers questions like "has this topic been talked about?" using meeting notes, slide summaries, and transcripts. The system uses OpenAI's `gpt-4o-mini` for analysis and `text-embedding-3-large` for embeddings.
+Carrie is a RAG (Retrieval-Augmented Generation) system for the Birmingham AI community. Named after Carrie A. Tuggle (1858-1924), a Birmingham educator who founded the first orphanage for African-American children in Alabama. It answers questions like "has this topic been talked about?" using meeting notes, slide summaries, and transcripts. The system uses OpenAI's `gpt-4o-mini` for analysis and `text-embedding-3-large` for embeddings.
 
 ## Common Commands
 
@@ -199,7 +199,7 @@ Core libraries in `requirements.txt`:
 
 **Directory Structure**:
 ```
-willAIam/
+carrie/
 ├── backend/              # All backend code
 │   ├── app.py           # Main FastAPI application
 │   ├── services/
@@ -227,7 +227,7 @@ willAIam/
 **Docker Commands**:
 ```bash
 # Build the image
-docker build -t willaim-backend .
+docker build -t carrie-backend .
 
 # Run with docker-compose (recommended)
 docker-compose up -d

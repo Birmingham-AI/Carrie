@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
     };
 
     // Create mailto link with error details
-    const subject = encodeURIComponent(`willAIam Error Report - ${this.props.context || 'General'}`);
+    const subject = encodeURIComponent(`Carrie Error Report - ${this.props.context || 'General'}`);
     const body = encodeURIComponent(`
 Error Details:
 - Message: ${errorDetails.message}

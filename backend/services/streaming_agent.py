@@ -19,8 +19,8 @@ from clients.eventbrite import is_configured as eventbrite_configured
 
 
 def load_prompt() -> str:
-    """Load the WillAIam prompt from file."""
-    prompt_path = Path(__file__).parent.parent / "prompts" / "willaim.txt"
+    """Load the Carrie prompt from file."""
+    prompt_path = Path(__file__).parent.parent / "prompts" / "carrie.txt"
     with open(prompt_path, "r") as f:
         return f.read()
 
@@ -233,7 +233,7 @@ class StreamingMeetingNotesAgent:
             instructions = self.instructions + history_text
 
         agent = Agent(
-            name="WillAIam",
+            name="Carrie",
             instructions=instructions,
             model=self.model,
             tools=tools,
@@ -257,13 +257,13 @@ class StreamingMeetingNotesAgent:
 
             # Create trace with explicit ID using trace_context
             with langfuse.start_as_current_span(
-                name="WillAIam Chat",
+                name="Carrie Chat",
                 input=question,
                 trace_context={"trace_id": trace_id}
             ) as span:
                 span.update_trace(
                     user_id=user_id or "anonymous",
-                    tags=["willaim", "meeting-notes"],
+                    tags=["carrie", "meeting-notes"],
                     metadata={
                         "model": self.model,
                         "web_search_enabled": self.enable_web_search,

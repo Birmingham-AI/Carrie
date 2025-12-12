@@ -18,13 +18,13 @@ OPENAI_API_KEY = getenv("OPENAI_API_KEY")
 
 
 def load_voice_prompt() -> str:
-    """Load the WillAIam prompt for voice interaction."""
-    prompt_path = Path(__file__).parent.parent / "prompts" / "willaim_voice.txt"
+    """Load the Carrie prompt for voice interaction."""
+    prompt_path = Path(__file__).parent.parent / "prompts" / "carrie_voice.txt"
     if prompt_path.exists():
         with open(prompt_path, "r") as f:
             return f.read()
     # Fall back to main prompt if voice-specific doesn't exist
-    prompt_path = Path(__file__).parent.parent / "prompts" / "willaim.txt"
+    prompt_path = Path(__file__).parent.parent / "prompts" / "carrie.txt"
     with open(prompt_path, "r") as f:
         return f.read()
 

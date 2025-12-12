@@ -1,6 +1,6 @@
-# will*AI*am
+# Carrie
 
-RAG-powered knowledge base for the Birmingham AI community. Ask questions about past meetups, presentations, and livestreams.
+RAG-powered knowledge base for the Birmingham AI community. Named after Carrie A. Tuggle (1858-1924), a Birmingham educator who founded the first orphanage for African-American children in Alabama. Ask questions about past meetups, presentations, and livestreams.
 
 ## Demo
 
@@ -10,8 +10,8 @@ RAG-powered knowledge base for the Birmingham AI community. Ask questions about 
 
 1. **Clone and configure**
    ```bash
-   git clone https://github.com/Birmingham-AI/willAIam.git
-   cd willAIam
+   git clone https://github.com/Birmingham-AI/carrie.git
+   cd carrie
    ```
 
 2. **Set up environment**
@@ -64,7 +64,7 @@ RAG-powered knowledge base for the Birmingham AI community. Ask questions about 
 ## Project Structure
 
 ```
-willAIam/
+carrie/
 ├── backend/
 │   ├── app.py                    # FastAPI application
 │   ├── routes/
