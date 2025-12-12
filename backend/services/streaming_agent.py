@@ -14,6 +14,8 @@ from agents import Agent, Runner, function_tool, WebSearchTool
 from typing import AsyncGenerator, Tuple
 
 from services.langfuse_tracing import get_langfuse_client
+from services.eventbrite_service import EventbriteService
+from clients.eventbrite import is_configured as eventbrite_configured
 
 
 def load_prompt() -> str:
@@ -38,6 +40,7 @@ class StreamingMeetingNotesAgent:
         self.rag_service = rag_service
         self.model = model
         self.enable_web_search = enable_web_search
+        self.eventbrite_service = EventbriteService()
         # Load prompt from file and inject current date
         prompt_template = load_prompt()
         self.instructions = prompt_template.format(
@@ -82,6 +85,117 @@ class StreamingMeetingNotesAgent:
 
         return search_meeting_notes
 
+    def _create_eventbrite_tool(self):
+        """Create the eventbrite tool function for the agent"""
+        eventbrite_service = self.eventbrite_service
+
+        @function_tool
+        async def eventbrite(action: str, limit: int = 3, event_id: str = None) -> str:
+            """
+            Get Birmingham AI events from Eventbrite.
+
+            Use this tool when users ask about:
+            - Future or upcoming events/meetups
+            - When the next meetup is
+            - Event registration or tickets
+            - Event topics, speakers, or agenda
+            - Event location or venue
+            - Full details about a specific event
+
+            Args:
+                action: "list" for upcoming events, "details" for full info about a specific event
+                limit: For list action - number of events to return (default: 3)
+                event_id: For details action - the event ID to get full details for
+
+            Returns:
+                Formatted event information
+            """
+            if action == "details":
+                if not event_id:
+                    return "Error: event_id is required for details action"
+
+                event = await eventbrite_service.get_event_details(event_id)
+                if not event:
+                    return f"Event {event_id} not found."
+
+                return _format_event_details(event)
+
+            else:  # list action
+                events = await eventbrite_service.get_upcoming_events(limit)
+
+                if not events:
+                    return "No upcoming events found. Check back later or visit the Birmingham AI Eventbrite page."
+
+                return _format_event_list(events)
+
+        def _format_event_list(events: list) -> str:
+            """Format list of events for display"""
+            formatted = []
+            for idx, event in enumerate(events, start=1):
+                parts = [f"{idx}. **{event['name']}** (ID: {event['id']})"]
+
+                if event['start_date']:
+                    time_str = f"{event['start_time']}"
+                    if event['end_time']:
+                        time_str += f" - {event['end_time']}"
+                    parts.append(f"   Date: {event['start_date']} at {time_str}")
+
+                if event['location']:
+                    parts.append(f"   Location: {event['location']}")
+
+                if event['description']:
+                    desc = event['description'][:200] + "..." if len(event['description']) > 200 else event['description']
+                    parts.append(f"   Description: {desc}")
+
+                if event.get('price'):
+                    parts.append(f"   Price: {event['price']}")
+                    if event['tickets_available'] is not None:
+                        parts.append(f"   Tickets Available: {event['tickets_available']}")
+                elif event['is_free']:
+                    parts.append("   Price: Free")
+
+                if event['url']:
+                    parts.append(f"   Register: {event['url']}")
+
+                formatted.append("\n".join(parts))
+
+            return "\n\n".join(formatted)
+
+        def _format_event_details(event: dict) -> str:
+            """Format single event with full details"""
+            parts = [f"**{event['name']}**"]
+
+            if event.get('start_date'):
+                time_str = f"{event['start_time']}"
+                if event.get('end_time'):
+                    time_str += f" - {event['end_time']}"
+                parts.append(f"Date: {event['start_date']} at {time_str}")
+
+            if event.get('location'):
+                parts.append(f"Location: {event['location']}")
+
+            if event.get('full_description'):
+                parts.append(f"\n**Description:**\n{event['full_description']}")
+            elif event.get('description'):
+                parts.append(f"\n**Description:**\n{event['description']}")
+
+            if event.get('agenda'):
+                parts.append("\n**Agenda:**")
+                for item in event['agenda']:
+                    parts.append(f"  - {item['time']}: {item['title']}")
+
+            if event.get('tickets_available') is not None:
+                parts.append(f"\nTickets Available: {event['tickets_available']}")
+            elif event.get('is_free'):
+                parts.append("\nPrice: Free")
+
+            if event.get('url'):
+                parts.append(f"\nRegister: {event['url']}")
+
+            return "\n".join(parts)
+
+        return eventbrite
+
     async def stream_answer(
         self, question: str, messages: list = None, user_id: str = None
     ) -> AsyncGenerator[Tuple[str, str], None]:
@@ -102,6 +216,10 @@ class StreamingMeetingNotesAgent:
         # Add web search tool if enabled
         if self.enable_web_search:
             tools.append(WebSearchTool())
+
+        # Add eventbrite tool if configured
+        if eventbrite_configured():
+            tools.append(self._create_eventbrite_tool())
 
         # Build instructions with conversation history injected
         instructions = self.instructions

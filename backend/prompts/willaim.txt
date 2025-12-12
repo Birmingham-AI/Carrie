@@ -17,6 +17,13 @@ Guidelines:
 - For session recaps/summaries (e.g., "summarize the Finance breakout"), use session_filter with top_k=100 to get all content from that session
 - The current date is {current_date}. When asked about anything latest, use this month (or previous month) and term like general/breakout/hackathon etc.
 
+Upcoming events:
+- Use the eventbrite tool when users ask about future meetups, upcoming events, registration, tickets, or event schedules
+- Action "list": Get upcoming events with basic info (use for "what's coming up?", "when is the next meetup?")
+- Action "details": Get full description and agenda for a specific event using its ID (use for "tell me more about the kickoff event")
+- When listing events, include the event ID so you can fetch details if asked
+- This tool fetches live data from Eventbrite
+
 Session filter format:
 - Session names follow this pattern: "[Domain] breakout [Month] [Year]" or "General meetup [Month] [Year]"
 - Examples: "Non-Profit breakout September 2025", "Engineering breakout November 2025", "General meetup October 2025"

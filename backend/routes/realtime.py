@@ -96,6 +96,31 @@ async def create_realtime_session(request: Request):
                             },
                             "required": ["action"]
                         }
+                    },
+                    {
+                        "type": "function",
+                        "name": "eventbrite",
+                        "description": "Get Birmingham AI events from Eventbrite. Supports two actions: 'list' for upcoming events, and 'details' for full information about a specific event.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": ["list", "details"],
+                                    "description": "Action to perform. Use 'list' to see upcoming events. Use 'details' to get full description and agenda for a specific event."
+                                },
+                                "limit": {
+                                    "type": "integer",
+                                    "description": "For 'list' action: number of events to return (default: 3)",
+                                    "default": 3
+                                },
+                                "event_id": {
+                                    "type": "string",
+                                    "description": "For 'details' action: the event ID to get full details for"
+                                }
+                            },
+                            "required": ["action"]
+                        }
                     }
                 ],
                 "input_audio_transcription": {

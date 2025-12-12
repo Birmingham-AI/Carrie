@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import voiceService, { VoiceEvent } from '../services/VoiceService';
+import voiceService, { VoiceEvent } from '../services/voice';
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
 
