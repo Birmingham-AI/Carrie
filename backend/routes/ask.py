@@ -5,6 +5,8 @@ from middleware import rate_limiter
 from models import QuestionRequest, SearchResult
 from services.rag_service import RAGService
 from services.streaming_agent import StreamingMeetingNotesAgent
+from services.eventbrite_service import EventbriteService
+from clients.eventbrite import is_configured as eventbrite_configured
 from utils import get_client_ip
 
 router = APIRouter(prefix="/v1", tags=["chat"])
@@ -74,13 +76,14 @@ async def ask_question(request: Request, question_request: QuestionRequest):
 
 
 @router.get("/search")
-async def search_notes(request: Request, question: str, top_k: int = 5):
+async def search_notes(request: Request, question: str, top_k: int = 5, session_filter: str = None):
     """
     Search meeting notes without answer synthesis.
 
     Query parameters:
     - question: The search query
     - top_k: Number of top results to return (default: 5)
+    - session_filter: Optional filter for session type or date
 
     Returns:
     - List of search results with similarity scores
@@ -88,9 +91,66 @@ async def search_notes(request: Request, question: str, top_k: int = 5):
     rate_limiter.check_rate_limit(request)
 
     try:
-        results = await rag_service.search_meeting_notes(question, top_k)
+        results = await rag_service.search_meeting_notes(question, top_k, session_filter)
         return {"results": [SearchResult(**result) for result in results]}
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get("/sessions")
+async def list_sessions(request: Request, filter: str = None):
+    """
+    List available sessions/meetings.
+
+    Query parameters:
+    - filter: Optional filter term (e.g., "November", "Engineering", "2025")
+
+    Returns:
+    - List of sessions with session_info and chunk_count
+    """
+    rate_limiter.check_rate_limit(request)
+
+    try:
+        sessions = await rag_service.list_sessions(filter)
+        return {"sessions": sessions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get("/events")
+async def get_events(request: Request, action: str = "list", limit: int = 3, event_id: str = None):
+    """
+    Get Birmingham AI events from Eventbrite.
+
+    Query parameters:
+    - action: "list" for upcoming events, "details" for full event info (default: "list")
+    - limit: Number of events to return for list action (default: 3)
+    - event_id: Event ID for details action
+
+    Returns:
+    - List of events (action=list) or single event with full details (action=details)
+    """
+    rate_limiter.check_rate_limit(request)
+
+    if not eventbrite_configured():
+        raise HTTPException(status_code=503, detail="Eventbrite integration not configured")
+
+    try:
+        eventbrite_service = EventbriteService()
+
+        if action == "details":
+            if not event_id:
+                raise HTTPException(status_code=400, detail="event_id required for details action")
+            event = await eventbrite_service.get_event_details(event_id)
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            return {"event": event}
+        else:
+            events = await eventbrite_service.get_upcoming_events(limit)
+            return {"events": events}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch events: {str(e)}")

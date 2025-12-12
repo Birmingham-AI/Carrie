@@ -6,6 +6,35 @@ from clients import get_supabase, get_embedding
 class RAGService:
     """Service for RAG operations: embedding and search"""
 
+    async def list_sessions(self, filter_term: str = None) -> List[Dict]:
+        """
+        List available sessions from the sources table.
+
+        Args:
+            filter_term: Optional filter to narrow results (e.g., "November", "Engineering", "2025")
+
+        Returns:
+            List of sessions with session_info and chunk_count
+        """
+        supabase = await get_supabase()
+
+        query = supabase.table("sources").select("session_info, chunk_count, processed_at").order("processed_at", desc=True)
+
+        if filter_term:
+            query = query.ilike("session_info", f"%{filter_term}%")
+
+        results = await query.execute()
+
+        return [
+            {
+                "session_info": row["session_info"],
+                "chunk_count": row["chunk_count"],
+                "processed_at": row["processed_at"]
+            }
+            for row in results.data
+            if row["session_info"]  # Filter out null session_info
+        ]
+
     async def search_meeting_notes(self, query: str, top_k: int = 5, session_filter: str = None) -> List[Dict]:
         """
         Search meeting notes using vector similarity via Supabase.

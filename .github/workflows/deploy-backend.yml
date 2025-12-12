@@ -60,6 +60,9 @@ jobs:
             LANGFUSE_PUBLIC_KEY=LANGFUSE_PUBLIC_KEY:latest
             LANGFUSE_SECRET_KEY=LANGFUSE_SECRET_KEY:latest
             LANGFUSE_BASE_URL=LANGFUSE_BASE_URL:latest
+            EVENTBRITE_API_TOKEN=EVENTBRITE_API_TOKEN:latest
+            EVENTBRITE_ORG_ID=EVENTBRITE_ORG_ID:latest
+            
 
       - name: Show Output
         run: echo "Deployed to ${{ steps.deploy.outputs.url }}"

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Square, Plus, Globe } from 'lucide-react';
 import { MessageInputProps } from '../../types/chat';
+import VoiceButton from './VoiceButton';
 
 /**
  * Component for handling user input
@@ -12,6 +13,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   isLoading,
   cancelStreaming,
   onNewChat,
+  voiceProps
 }) => {
   const [enableWebSearch, setEnableWebSearch] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -54,7 +56,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Ask a question..."
+              placeholder={voiceProps?.isVoiceMode ? "Listening... or type here" : "Ask a question..."}
               className="flex-1 py-2 px-2 bg-transparent border-none focus:outline-none resize-none min-h-[40px] max-h-[200px] text-gray-700 placeholder-gray-400"
               disabled={isLoading}
               rows={1}
@@ -63,6 +65,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 overflowY: inputMessage.split('\n').length > 5 ? 'auto' : 'hidden'
               }}
             />
+
+            {/* Voice Button */}
+            {voiceProps && (
+              <VoiceButton
+                isSupported={voiceProps.isSupported}
+                isVoiceMode={voiceProps.isVoiceMode}
+                isConnecting={voiceProps.isConnecting}
+                onToggleVoiceMode={voiceProps.onToggleVoiceMode}
+              />
+            )}
 
             {/* Stop Button (when streaming) */}
             {isLoading && (
@@ -75,8 +87,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
               </button>
             )}
 
-            {/* Send Button (when not streaming) */}
-            {!isLoading && (
+            {/* Send Button (when not streaming and not in voice mode) */}
+            {!isLoading && !voiceProps?.isVoiceMode && (
               <button
                 onClick={() => handleSendMessage(enableWebSearch)}
                 disabled={!inputMessage.trim()}

@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import { ChatMessage } from '../../types/chat';
+import { ChatMessage, VoiceInputProps } from '../../types/chat';
 import apiService from '../../services/ApiService';
+import { useVoice } from '../../hooks/useVoice';
 
 interface ChatContainerProps {
   isSidebarOpen?: boolean;
@@ -11,6 +12,24 @@ interface ChatContainerProps {
 }
 
 const STORAGE_KEY = 'willaim_conversation_history';
+
+const EXAMPLE_PROMPTS = [
+  "How many meetings happened in Nov 2025?",
+  "Summarize the Nov general meeting",
+  "When did the finance breakout start?",
+  "What topics were discussed in October marketing breakout?",
+  "Did we ever talk about Genie model in our meetings?",
+  "What was the last HR breakout meeting about?",
+  "Did we talk about prompt quality and context?",
+  "when was the first ever meeting?",
+  "How can organizations use claude code?",
+  "Did we ever talk about RAG?",
+];
+
+const getRandomPrompts = (count: number): string[] => {
+  const shuffled = [...EXAMPLE_PROMPTS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+};
 
 /**
  * Main container component for the chat interface
@@ -24,7 +43,36 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ selectedModel = 'gpt-4o-m
   });
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [displayedPrompts, setDisplayedPrompts] = useState<string[]>(() => getRandomPrompts(2));
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Voice message handlers
+  const handleVoiceUserMessage = useCallback((content: string) => {
+    if (!content.trim()) return;
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+      isVoice: true
+    };
+    setMessages(prev => [...prev, userMessage]);
+  }, []);
+
+  const handleVoiceAssistantMessage = useCallback((content: string) => {
+    if (!content.trim()) return;
+    const assistantMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'assistant',
+      content,
+      timestamp: new Date().toISOString(),
+      isVoice: true
+    };
+    setMessages(prev => [...prev, assistantMessage]);
+  }, []);
+
+  // Initialize voice hook with callbacks
+  const voice = useVoice(handleVoiceUserMessage, handleVoiceAssistantMessage);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -149,7 +197,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ selectedModel = 'gpt-4o-m
     setMessages([]);
     setInputMessage('');
     setIsLoading(false);
-    // Clear conversation history from localStorage
+    setDisplayedPrompts(getRandomPrompts(2));
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -173,6 +221,23 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ selectedModel = 'gpt-4o-m
           />
         </div>
 
+        {/* Example Prompts - shown above input when chat is empty */}
+        {messages.length === 0 && !isLoading && (
+          <div className="px-4 pb-2">
+            <div className="mx-auto max-w-6xl flex gap-2 justify-center">
+              {displayedPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => setInputMessage(prompt)}
+                  className="text-sm px-4 py-2 bg-white border border-gray-200 rounded-full hover:border-blue-300 hover:bg-blue-50/50 transition-all text-gray-600 hover:text-gray-800 shadow-sm hover:shadow-md"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Input */}
         <MessageInput
           inputMessage={inputMessage}
@@ -181,6 +246,12 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ selectedModel = 'gpt-4o-m
           isLoading={isLoading}
           cancelStreaming={cancelStreaming}
           onNewChat={handleNewChat}
+          voiceProps={{
+            isSupported: voice.isSupported,
+            isVoiceMode: voice.isVoiceMode,
+            isConnecting: voice.isConnecting,
+            onToggleVoiceMode: voice.toggleVoiceMode
+          } as VoiceInputProps}
         />
       </div>
     </div>

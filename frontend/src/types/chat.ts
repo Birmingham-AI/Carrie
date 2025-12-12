@@ -7,6 +7,17 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   traceId?: string;  // For assistant messages, used for feedback
+  isVoice?: boolean; // Whether this message was from voice interaction
+}
+
+/**
+ * Voice props passed to MessageInput
+ */
+export interface VoiceInputProps {
+  isSupported: boolean;
+  isVoiceMode: boolean;
+  isConnecting: boolean;
+  onToggleVoiceMode: () => void;
 }
 
 /**
@@ -19,4 +30,5 @@ export interface MessageInputProps {
   isLoading: boolean;
   cancelStreaming?: () => void;
   onNewChat?: () => void;
+  voiceProps?: VoiceInputProps;
 }
