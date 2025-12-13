@@ -52,6 +52,7 @@ export function useVoice(
   const userTranscriptRef = useRef('');
   const assistantResponseRef = useRef('');
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingFunctionCallRef = useRef(false);
 
   // Reset inactivity timeout
   const resetInactivityTimeout = useCallback(() => {
@@ -130,12 +131,15 @@ export function useVoice(
           // Clear previous response when new one starts
           setAssistantResponse('');
           assistantResponseRef.current = '';
+          // Reset function call flag - this is a new response cycle
+          pendingFunctionCallRef.current = false;
           break;
 
         case 'response_audio_ended':
           setIsPlaying(false);
-          // Trigger assistant message callback with final response
-          if (assistantResponseRef.current && onAssistantMessage) {
+          // Only add message if not waiting for function call result
+          // Function calls trigger another response cycle, so we wait for the final one
+          if (!pendingFunctionCallRef.current && assistantResponseRef.current && onAssistantMessage) {
             onAssistantMessage(assistantResponseRef.current);
           }
           resetInactivityTimeout(); // Reset timeout after response completes
@@ -147,7 +151,9 @@ export function useVoice(
           break;
 
         case 'function_call':
-          // Function calls are handled internally by VoiceService
+          // Mark that we're waiting for function call result
+          // The next response cycle will contain the actual response
+          pendingFunctionCallRef.current = true;
           break;
       }
     });

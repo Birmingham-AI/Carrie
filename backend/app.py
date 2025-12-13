@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import ask_router, upload_router, feedback_router, realtime_router
+from routes import ask_router, upload_router, feedback_router, realtime_router, voice_trace_router
 from services.langfuse_tracing import init_langfuse
 
 # Load environment variables
@@ -35,6 +35,7 @@ app.include_router(ask_router)
 app.include_router(upload_router)
 app.include_router(feedback_router)
 app.include_router(realtime_router)
+app.include_router(voice_trace_router)
 
 
 @app.get("/")

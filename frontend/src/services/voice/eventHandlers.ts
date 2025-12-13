@@ -8,6 +8,11 @@ export interface EventHandlerContext {
   emit: (event: VoiceEvent) => void;
   sendFunctionResult: (callId: string, output: string) => void;
   pendingFunctionCalls: Map<string, PendingFunctionCall>;
+  // Langfuse tracing callbacks
+  onTranscript?: (text: string) => void;
+  onResponseText?: (text: string) => void;
+  onResponseEnd?: () => void;
+  onFunctionCall?: (name: string, args: string, result: string) => void;
 }
 
 /**
@@ -38,7 +43,7 @@ export async function handleRealtimeEvent(
   event: RealtimeEvent,
   context: EventHandlerContext
 ): Promise<void> {
-  const { emit, sendFunctionResult, pendingFunctionCalls } = context;
+  const { emit, sendFunctionResult, pendingFunctionCalls, onTranscript, onResponseText, onResponseEnd } = context;
 
   switch (event.type) {
     case 'conversation.item.input_audio_transcription.completed':
@@ -46,6 +51,8 @@ export async function handleRealtimeEvent(
         type: 'transcript',
         data: event.transcript as string
       });
+      // Log transcript to Langfuse
+      onTranscript?.(event.transcript as string);
       break;
 
     case 'response.text.delta':
@@ -53,6 +60,8 @@ export async function handleRealtimeEvent(
         type: 'response_text',
         data: event.delta as string
       });
+      // Accumulate response text for Langfuse
+      onResponseText?.(event.delta as string);
       break;
 
     case 'response.audio.delta':
@@ -64,6 +73,8 @@ export async function handleRealtimeEvent(
         type: 'response_text',
         data: event.delta as string
       });
+      // Accumulate response text for Langfuse
+      onResponseText?.(event.delta as string);
       break;
 
     case 'response.output_item.added':
@@ -72,6 +83,8 @@ export async function handleRealtimeEvent(
 
     case 'response.done':
       emit({ type: 'response_audio_ended' });
+      // Log complete response to Langfuse
+      onResponseEnd?.();
       break;
 
     case 'response.function_call_arguments.delta':
@@ -143,7 +156,7 @@ async function handleFunctionCallDone(
   event: RealtimeEvent,
   context: EventHandlerContext
 ): Promise<void> {
-  const { emit, sendFunctionResult, pendingFunctionCalls } = context;
+  const { emit, sendFunctionResult, pendingFunctionCalls, onFunctionCall } = context;
 
   const callId = event.call_id as string;
   const functionCall = pendingFunctionCalls.get(callId) || {
@@ -163,5 +176,8 @@ async function handleFunctionCallDone(
   if (funcName) {
     const result = await executeFunction(funcName, funcArgs);
     sendFunctionResult(callId, result.output);
+
+    // Log function call to Langfuse
+    onFunctionCall?.(funcName, funcArgs, result.output);
   }
 }

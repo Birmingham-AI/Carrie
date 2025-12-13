@@ -1,6 +1,7 @@
 import type { VoiceEvent, VoiceEventCallback, PendingFunctionCall } from './types';
 import { createConnection, cleanupConnection, sendMessage, isWebRTCSupported, ConnectionResources } from './connection';
 import { handleRealtimeEvent } from './eventHandlers';
+import { startVoiceTrace, endVoiceTrace, logVoiceEvent } from './tracing';
 
 /**
  * VoiceService manages WebRTC connection to OpenAI Realtime API
@@ -11,6 +12,7 @@ class VoiceService {
   private eventCallbacks: VoiceEventCallback[] = [];
   private isConnected = false;
   private pendingFunctionCalls: Map<string, PendingFunctionCall> = new Map();
+  private accumulatedResponse = '';
 
   /**
    * Subscribe to voice events
@@ -50,6 +52,9 @@ class VoiceService {
     }
 
     try {
+      // Start Langfuse trace
+      await startVoiceTrace();
+
       this.resources = await createConnection((event) => {
         this.handleDataChannelMessage(event);
       });
@@ -74,7 +79,22 @@ class VoiceService {
       await handleRealtimeEvent(message, {
         emit: (e) => this.emit(e),
         sendFunctionResult: (callId, output) => this.sendFunctionResult(callId, output),
-        pendingFunctionCalls: this.pendingFunctionCalls
+        pendingFunctionCalls: this.pendingFunctionCalls,
+        onTranscript: (text) => {
+          logVoiceEvent('user_transcript', text);
+        },
+        onResponseText: (text) => {
+          this.accumulatedResponse += text;
+        },
+        onResponseEnd: () => {
+          if (this.accumulatedResponse) {
+            logVoiceEvent('assistant_response', this.accumulatedResponse);
+            this.accumulatedResponse = '';
+          }
+        },
+        onFunctionCall: (name, args, result) => {
+          logVoiceEvent('function_call', `${name}(${args})`, { result });
+        }
       });
     } catch {
       // Silent fail on parse errors
@@ -163,7 +183,11 @@ class VoiceService {
     cleanupConnection(this.resources);
     this.resources = {};
     this.pendingFunctionCalls.clear();
+    this.accumulatedResponse = '';
     this.isConnected = false;
+
+    // End Langfuse trace
+    endVoiceTrace();
   }
 }
 
