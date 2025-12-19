@@ -1,6 +1,6 @@
 # WebRTC support
 aiortc>=1.6.0
-av>=10.0.0
+av>=11.0.0  # 11.0.0+ required for NumPy 2.0 compatibility
 
 # Audio I/O
 pyaudio>=0.2.14
@@ -15,7 +15,7 @@ python-dotenv>=1.0.0
 httpx>=0.27.0
 
 # NumPy for audio processing
-numpy>=1.24.0
+numpy>=2.0.0  # Requires NumPy 2.x (1.x is end-of-life)
 
 # Async operations (built-in, but listed for clarity)
 # asyncio is part of Python standard library
