@@ -6,7 +6,10 @@ av>=11.0.0  # 11.0.0+ required for NumPy 2.0 compatibility
 pyaudio>=0.2.14
 
 # GPIO button handling
-RPi.GPIO>=0.7.1
+# Note: Requires system packages: build-essential, python3-dev, swig, liblgpio-dev
+# Install with: sudo apt-get install -y build-essential python3-dev swig liblgpio-dev
+# The liblgpio-dev package provides the system lgpio library that rpi-lgpio links against
+rpi-lgpio>=0.2.0.0  # Use rpi-lgpio instead of RPi.GPIO for newer kernel compatibility
 
 # Environment configuration
 python-dotenv>=1.0.0

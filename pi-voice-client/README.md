@@ -15,11 +15,17 @@ A standalone Python application for Raspberry Pi that provides push-to-talk voic
 
 - Raspberry Pi OS (or compatible Linux distribution)
 - Python 3.9 or higher
-- System packages:
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y portaudio19-dev python3-dev
-  ```
+
+**IMPORTANT: Install system dependencies BEFORE installing Python packages:**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y portaudio19-dev python3-dev build-essential swig liblgpio-dev
+```
+
+These are required for building PyAudio and rpi-lgpio. Without them, `pip install -r requirements.txt` will fail with compilation errors.
+
+**Note:** `liblgpio-dev` provides the system `lgpio` library that `rpi-lgpio` Python package depends on.
 
 ## Setup
 
@@ -33,18 +39,26 @@ A standalone Python application for Raspberry Pi that provides push-to-talk voic
    cd pi-voice-client
    ```
 
-3. **Create virtual environment** (recommended):
+3. **Install system dependencies** (REQUIRED - do this first):
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y portaudio19-dev python3-dev build-essential swig liblgpio-dev
+   ```
+   
+   **Note:** These must be installed BEFORE creating the virtual environment and installing Python packages. PyAudio and rpi-lgpio require these system libraries to compile. The `liblgpio-dev` package provides the system `lgpio` library that the Python `rpi-lgpio` package depends on.
+
+4. **Create virtual environment** (recommended):
    ```bash
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-4. **Install dependencies**:
+5. **Install Python dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-5. **Configure environment variables**:
+6. **Configure environment variables**:
    ```bash
    cp .env.example .env
    nano .env  # Edit with your settings
@@ -52,22 +66,22 @@ A standalone Python application for Raspberry Pi that provides push-to-talk voic
 
    Key settings:
    - `API_BASE_URL`: Your backend API URL (default: `http://localhost:8001`)
-   - `BUTTON_GPIO_PIN`: GPIO pin number for button (default: 18)
+   - `BUTTON_GPIO_PIN`: GPIO pin number for button (default: 22)
    - Audio settings: Usually don't need to change defaults
 
-6. **Wire the button**:
-   - Connect one side of button to GPIO pin (default: GPIO 18)
+7. **Wire the button**:
+   - Connect one side of button to GPIO pin (default: GPIO 22)
    - Connect other side to GND
    - Optional: Add 10kΩ pull-up resistor between GPIO pin and 3.3V
 
 ## GPIO Pin Configuration
 
-Default button pin: **GPIO 18** (Physical pin 12)
+Default button pin: **GPIO 22** (Physical pin 15)
 
 To use a different pin, set `BUTTON_GPIO_PIN` in `.env` file.
 
 Common GPIO pins:
-- GPIO 18 (Physical pin 12) - Default
+- GPIO 22 (Physical pin 15) - Default
 - GPIO 23 (Physical pin 16)
 - GPIO 24 (Physical pin 18)
 - GPIO 25 (Physical pin 22)
@@ -130,9 +144,30 @@ python -m src.main
 - Verify backend `/v1/realtime/session` endpoint works
 - Check internet connection (WebRTC requires stable connection)
 
-### WebRTC/aiortc Issues
+### Installation Issues
 
-**Import errors or installation issues:**
+**PyAudio build fails with "portaudio.h: No such file or directory":**
+- This means system dependencies are missing
+- Install required packages: `sudo apt-get install -y portaudio19-dev python3-dev build-essential swig`
+- Then retry: `pip install -r requirements.txt`
+
+**rpi-lgpio build fails with "swig: command not found":**
+- Install swig: `sudo apt-get install -y swig build-essential python3-dev liblgpio-dev`
+- Then retry: `pip install -r requirements.txt`
+
+**rpi-lgpio build fails with "cannot find -llgpio":**
+- This means the system `lgpio` library is missing
+- Install: `sudo apt-get install -y liblgpio-dev`
+- Then retry: `pip install -r requirements.txt`
+
+**rpi-lgpio installation issues:**
+- Ensure ALL system dependencies are installed: `sudo apt-get install -y build-essential python3-dev swig liblgpio-dev`
+- The `liblgpio-dev` package provides the system library that rpi-lgpio Python package links against
+- rpi-lgpio is required for newer Raspberry Pi kernels (6.6+). Older kernels may use RPi.GPIO
+- Ensure you're running on a Raspberry Pi (not emulated)
+- Check Python version: `python3 --version` (needs 3.9+)
+
+**WebRTC/aiortc Issues:**
 - Ensure system dependencies are installed: `sudo apt-get install portaudio19-dev python3-dev`
 - Try reinstalling: `pip install --upgrade aiortc`
 - Check Python version: `python3 --version` (needs 3.9+)

@@ -6,6 +6,7 @@ Monitors a GPIO pin for button press/release events with debouncing.
 
 import logging
 import time
+import platform
 from typing import Callable, Optional
 import RPi.GPIO as GPIO
 from .config import config
@@ -39,19 +40,53 @@ class ButtonHandler:
         self.last_state = GPIO.LOW
         self.last_state_change_time = 0.0
 
-        # Setup GPIO
-        GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
-        GPIO.setup(self.gpio_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Pull-up resistor
+        # Check if we're on Raspberry Pi hardware
+        machine = platform.machine()
+        if machine not in ['armv7l', 'aarch64', 'armv6l']:
+            raise RuntimeError(
+                f"GPIO is only available on Raspberry Pi hardware. "
+                f"Detected platform: {machine}. "
+                f"This application must run on a Raspberry Pi."
+            )
 
-        # Add event detection for both rising and falling edges
-        GPIO.add_event_detect(
-            self.gpio_pin,
-            GPIO.BOTH,
-            callback=self._edge_callback,
-            bouncetime=int(self.DEBOUNCE_TIME * 1000),  # Convert to milliseconds
-        )
+        try:
+            # Suppress warnings about channels already in use
+            GPIO.setwarnings(False)
+            
+            # Set GPIO mode (BCM pin numbering)
+            GPIO.setmode(GPIO.BCM)
+            
+            # Clean up any existing event detection on this pin
+            try:
+                GPIO.remove_event_detect(self.gpio_pin)
+            except (RuntimeError, ValueError):
+                # Pin may not have event detection set up, which is fine
+                pass
+            
+            # Setup GPIO pin as input with pull-up resistor
+            GPIO.setup(self.gpio_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-        logger.info(f"Button handler initialized on GPIO {self.gpio_pin}")
+            # Add event detection for both rising and falling edges
+            GPIO.add_event_detect(
+                self.gpio_pin,
+                GPIO.BOTH,
+                callback=self._edge_callback,
+                bouncetime=int(self.DEBOUNCE_TIME * 1000),  # Convert to milliseconds
+            )
+
+            logger.info(f"Button handler initialized on GPIO {self.gpio_pin}")
+
+        except RuntimeError as e:
+            error_msg = str(e)
+            if "channel" in error_msg.lower() or "already" in error_msg.lower():
+                raise RuntimeError(
+                    f"GPIO pin {self.gpio_pin} is already in use. "
+                    f"This may happen if a previous instance didn't clean up properly. "
+                    f"Try running: sudo python3 -c 'import RPi.GPIO as GPIO; GPIO.setmode(GPIO.BCM); GPIO.cleanup()'"
+                ) from e
+            raise RuntimeError(f"Failed to initialize GPIO pin {self.gpio_pin}: {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"Failed to add edge detection on GPIO {self.gpio_pin}: {e}") from e
 
     def _edge_callback(self, channel: int) -> None:
         """
@@ -75,7 +110,7 @@ class ButtonHandler:
             # Button pressed (falling edge)
             if not self.is_pressed:
                 self.is_pressed = True
-                logger.debug("Button pressed")
+                logger.info("Button pressed")
                 if self.on_press:
                     try:
                         self.on_press()
@@ -86,7 +121,7 @@ class ButtonHandler:
             # Button released (rising edge)
             if self.is_pressed:
                 self.is_pressed = False
-                logger.debug("Button released")
+                logger.info("Button released")
                 if self.on_release:
                     try:
                         self.on_release()
@@ -108,4 +143,3 @@ class ButtonHandler:
             logger.info("Button handler cleaned up")
         except Exception as e:
             logger.error(f"Error cleaning up button handler: {e}")
-

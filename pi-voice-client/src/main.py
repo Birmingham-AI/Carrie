@@ -42,10 +42,16 @@ class VoiceClientApp:
 
         # Response text accumulation for voice trace
         self.response_text = ""
+        
+        # Event loop reference for thread-safe scheduling
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def initialize(self) -> None:
         """Initialize all components."""
         try:
+            # Store reference to event loop for thread-safe callbacks
+            self.loop = asyncio.get_running_loop()
+            
             # Validate configuration
             errors = config.validate()
             if errors:
@@ -98,9 +104,12 @@ class VoiceClientApp:
         Args:
             audio_data: PCM audio data
         """
+        logger.info(f"Received {len(audio_data)} bytes of audio from OpenAI")
         if self.audio_handler:
             # Play audio through speakers
             self.audio_handler.play_audio(audio_data)
+        else:
+            logger.warning("Audio handler not available, cannot play audio")
 
     def _on_webrtc_event(self, event: dict) -> None:
         """
@@ -146,6 +155,10 @@ class VoiceClientApp:
                 )
             logger.info(f"Assistant: {self.response_text}")
             self.response_text = ""
+            
+            # Close the connection now that response is complete
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(self._close_connection(), self.loop)
 
         elif event_type == "response.function_call_arguments.done":
             # Function call completed
@@ -170,7 +183,11 @@ class VoiceClientApp:
             return
 
         logger.info("Button pressed - starting recording")
-        asyncio.create_task(self._start_recording())
+        # Schedule coroutine from callback thread using the main event loop
+        if self.loop:
+            asyncio.run_coroutine_threadsafe(self._start_recording(), self.loop)
+        else:
+            logger.error("Event loop not available, cannot start recording")
 
     def _on_button_release(self) -> None:
         """Handle button release (stop recording and send)."""
@@ -178,7 +195,11 @@ class VoiceClientApp:
             return
 
         logger.info("Button released - stopping recording")
-        asyncio.create_task(self._stop_recording())
+        # Schedule coroutine from callback thread using the main event loop
+        if self.loop:
+            asyncio.run_coroutine_threadsafe(self._stop_recording(), self.loop)
+        else:
+            logger.error("Event loop not available, cannot stop recording")
 
     async def _start_recording(self) -> None:
         """Start recording and establish connection."""
@@ -205,27 +226,51 @@ class VoiceClientApp:
             await self._stop_recording()
 
     async def _stop_recording(self) -> None:
-        """Stop recording and close connection."""
+        """Stop recording but keep connection open for response."""
         try:
             self.is_recording = False
 
-            # Stop audio recording
+            # Stop audio recording (but keep connection open)
             if self.audio_handler:
                 self.audio_handler.stop_recording()
 
-            # Close WebRTC connection
+            # Signal to OpenAI that input is complete
             if self.webrtc_client and self.current_session_active:
-                await self.webrtc_client.cleanup()
-                self.current_session_active = False
+                # Send input_audio_buffer.commit event to signal input is complete
+                try:
+                    await self.webrtc_client.send_event({
+                        "type": "input_audio_buffer.commit"
+                    })
+                    logger.info("Signaled input complete to OpenAI - waiting for response")
+                except Exception as e:
+                    logger.error(f"Failed to send input_audio_buffer.commit event: {e}")
+            else:
+                logger.warning("Cannot send commit event: WebRTC client not available or session not active")
 
-            # End voice trace session
-            if self.voice_trace_client:
-                await self.voice_trace_client.end_session()
+            # DON'T close connection here - wait for response.done event
+            # The connection will be closed when response.done is received
 
-            logger.info("Recording stopped and connection closed")
+            logger.info("Recording stopped, waiting for response...")
 
         except Exception as e:
             logger.error(f"Error stopping recording: {e}")
+            # If there's an error, still try to close connection
+            await self._close_connection()
+    
+    async def _close_connection(self) -> None:
+        """Close WebRTC connection after response is complete."""
+        try:
+            if self.webrtc_client and self.current_session_active:
+                await self.webrtc_client.cleanup()
+                self.current_session_active = False
+                logger.info("WebRTC connection closed after response")
+            
+            # End voice trace session
+            if self.voice_trace_client:
+                await self.voice_trace_client.end_session()
+                
+        except Exception as e:
+            logger.error(f"Error closing connection: {e}")
 
     async def run(self) -> None:
         """Run the application main loop."""
@@ -253,12 +298,18 @@ class VoiceClientApp:
         try:
             # Stop recording if active
             if self.is_recording:
-                await self._stop_recording()
+                self.is_recording = False
+                if self.audio_handler:
+                    self.audio_handler.stop_recording()
 
-            # Clean up components
-            if self.webrtc_client:
+            # Close connection and end voice trace
+            if self.current_session_active:
+                await self._close_connection()
+            elif self.webrtc_client:
+                # If connection exists but wasn't active, just cleanup
                 await self.webrtc_client.cleanup()
 
+            # Clean up components
             if self.audio_handler:
                 self.audio_handler.cleanup()
 
