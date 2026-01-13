@@ -27,7 +27,16 @@ class Config:
     # AUDIO_SAMPLE_RATE: Playback sample rate (must be supported by your USB device)
     # OpenAI sends 96kHz audio which is automatically resampled to match this rate
     AUDIO_SAMPLE_RATE: int = int(os.getenv("AUDIO_SAMPLE_RATE", "48000"))
-    AUDIO_CHANNELS: int = int(os.getenv("AUDIO_CHANNELS", "1"))
+    
+    # Microphone input is always MONO (OpenAI requires mono input)
+    AUDIO_INPUT_CHANNELS: int = 1
+    
+    # Speaker output can be MONO or STEREO (set to match your USB device)
+    AUDIO_OUTPUT_CHANNELS: int = int(os.getenv("AUDIO_CHANNELS", "1"))
+    
+    # Legacy support: AUDIO_CHANNELS sets output channels
+    AUDIO_CHANNELS: int = AUDIO_OUTPUT_CHANNELS
+    
     AUDIO_CHUNK_SIZE: int = int(os.getenv("AUDIO_CHUNK_SIZE", "480"))
 
     # Audio format (OpenAI Realtime API requirements)
@@ -62,8 +71,8 @@ class Config:
         if cls.AUDIO_SAMPLE_RATE < 8000 or cls.AUDIO_SAMPLE_RATE > 48000:
             errors.append(f"AUDIO_SAMPLE_RATE must be between 8000 and 48000, got {cls.AUDIO_SAMPLE_RATE}")
 
-        if cls.AUDIO_CHANNELS not in [1, 2]:
-            errors.append(f"AUDIO_CHANNELS must be 1 (mono) or 2 (stereo), got {cls.AUDIO_CHANNELS}")
+        if cls.AUDIO_OUTPUT_CHANNELS not in [1, 2]:
+            errors.append(f"AUDIO_CHANNELS must be 1 (mono) or 2 (stereo), got {cls.AUDIO_OUTPUT_CHANNELS}")
 
         if cls.AUDIO_CHUNK_SIZE < 100 or cls.AUDIO_CHUNK_SIZE > 4096:
             errors.append(f"AUDIO_CHUNK_SIZE must be between 100 and 4096, got {cls.AUDIO_CHUNK_SIZE}")
@@ -78,7 +87,8 @@ class Config:
             f"API_BASE_URL={cls.API_BASE_URL}, "
             f"BUTTON_GPIO_PIN={cls.BUTTON_GPIO_PIN}, "
             f"AUDIO_SAMPLE_RATE={cls.AUDIO_SAMPLE_RATE}, "
-            f"AUDIO_CHANNELS={cls.AUDIO_CHANNELS}, "
+            f"AUDIO_INPUT_CHANNELS={cls.AUDIO_INPUT_CHANNELS}, "
+            f"AUDIO_OUTPUT_CHANNELS={cls.AUDIO_OUTPUT_CHANNELS}, "
             f"AUDIO_CHUNK_SIZE={cls.AUDIO_CHUNK_SIZE}, "
             f"DEBUG_AUDIO_RECORDING={cls.DEBUG_AUDIO_RECORDING}, "
             f"DEBUG_AUDIO_OUTPUT_DIR={cls.DEBUG_AUDIO_OUTPUT_DIR}"

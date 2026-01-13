@@ -37,7 +37,9 @@ class AudioHandler:
 
         # Audio configuration
         self.sample_rate = config.AUDIO_SAMPLE_RATE
-        self.channels = config.AUDIO_CHANNELS
+        self.input_channels = config.AUDIO_INPUT_CHANNELS  # Always mono for microphone
+        self.output_channels = config.AUDIO_OUTPUT_CHANNELS  # Stereo or mono for speakers
+        self.channels = self.output_channels  # Legacy: for backward compatibility with playback code
         self.chunk_size = config.AUDIO_CHUNK_SIZE
         self.format = PYAUDIO_FORMAT
         self.format_width = pyaudio.get_sample_size(self.format)
@@ -74,7 +76,8 @@ class AudioHandler:
 
         logger.info(
             f"Audio handler initialized: {self.sample_rate}Hz, "
-            f"{self.channels} channel(s), chunk_size={self.chunk_size}"
+            f"input={self.input_channels}ch (mono), output={self.output_channels}ch, "
+            f"chunk_size={self.chunk_size}"
         )
         if self.output_device_index is not None:
             output_info = self.audio.get_device_info_by_index(self.output_device_index)
@@ -219,10 +222,10 @@ class AudioHandler:
             return
 
         try:
-            # Open input stream
+            # Open input stream (always mono for microphone)
             self.input_stream = self.audio.open(
                 format=self.format,
-                channels=self.channels,
+                channels=self.input_channels,  # Use input_channels (mono)
                 rate=self.sample_rate,
                 input=True,
                 frames_per_buffer=self.chunk_size,
@@ -231,7 +234,7 @@ class AudioHandler:
 
             self.is_recording = True
             self.input_stream.start_stream()
-            logger.info("Started recording")
+            logger.info(f"Started recording (mono, {self.sample_rate}Hz)")
 
         except Exception as e:
             error_msg = str(e)
@@ -412,13 +415,16 @@ class AudioHandler:
         # This matches what the callback expects: chunk_size frames × channels × bytes per sample
         expected_chunk_size = self.chunk_size * self.channels * self.format_width
         
-        # Validate: expected is 480 * 1 * 2 = 960 bytes at 48000Hz
-        if expected_chunk_size != 960:
-            logger.warning(
-                f"Expected chunk size is {expected_chunk_size}, not 960! "
-                f"Check config: chunk_size={self.chunk_size}, "
-                f"channels={self.channels}, format_width={self.format_width}"
+        # Log chunk size for verification on first call
+        if not hasattr(self, '_chunk_size_logged'):
+            logger.info(
+                f"Audio playback chunk configuration: "
+                f"chunk_size={self.chunk_size} frames, "
+                f"channels={self.channels}, "
+                f"format_width={self.format_width} bytes, "
+                f"expected_chunk_size={expected_chunk_size} bytes"
             )
+            self._chunk_size_logged = True
         
         # Check if audio contains actual sound (not just silence)
         import numpy as np

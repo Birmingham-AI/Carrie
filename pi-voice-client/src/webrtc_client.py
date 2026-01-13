@@ -9,7 +9,6 @@ import json
 import asyncio
 import struct
 import time
-from math import gcd
 import numpy as np
 from typing import Optional, Callable
 import httpx
@@ -199,10 +198,10 @@ class WebRTCClient:
             # Create peer connection
             self.peer_connection = RTCPeerConnection()
 
-            # Create microphone track
+            # Create microphone track (always mono for OpenAI)
             self.microphone_track = MicrophoneAudioTrack(
                 sample_rate=config.AUDIO_SAMPLE_RATE,
-                channels=config.AUDIO_CHANNELS,
+                channels=config.AUDIO_INPUT_CHANNELS,  # Always 1 (mono) for microphone
             )
             self.microphone_track._started = True
             self.peer_connection.addTrack(self.microphone_track)
@@ -335,7 +334,7 @@ class WebRTCClient:
                             )
                             logger.info(
                                 f"Output stream configured for: {config.AUDIO_SAMPLE_RATE}Hz, "
-                                f"channels: {config.AUDIO_CHANNELS}"
+                                f"channels: {config.AUDIO_OUTPUT_CHANNELS}"
                             )
                             logger.warning(
                                 f"OpenAI metadata reports {frame.sample_rate}Hz, but actual audio data is 96kHz. "
@@ -376,8 +375,9 @@ class WebRTCClient:
                                 if array.dtype == np.float32 or array.dtype == np.float64:
                                     # Float audio: normalized -1.0 to 1.0
                                     
-                                    # Handle stereo-to-mono BEFORE scaling (at float level)
-                                    if is_stereo and config.AUDIO_CHANNELS == 1:
+                                    # Handle channel conversion
+                                    if is_stereo and config.AUDIO_OUTPUT_CHANNELS == 1:
+                                        # Convert stereo to mono (mix both channels)
                                         # Reshape if needed for interleaved data
                                         if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
                                             # Interleaved stereo: reshape to planar
@@ -392,9 +392,19 @@ class WebRTCClient:
                                         else:
                                             # Unknown format: take first channel
                                             array = array[0] if len(array.shape) == 2 else array
-                                    elif len(array.shape) == 2:
-                                        # Multi-channel non-stereo: take first channel
+                                    elif is_stereo and config.AUDIO_OUTPUT_CHANNELS == 2:
+                                        # Keep stereo as-is, just ensure proper shape
+                                        # Reshape if needed for interleaved data
+                                        if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
+                                            # Interleaved stereo: reshape to planar [2, samples]
+                                            array = array.reshape(2, frame.samples)
+                                        # If already planar [2, samples], keep as-is
+                                    elif len(array.shape) == 2 and config.AUDIO_OUTPUT_CHANNELS == 1:
+                                        # Multi-channel non-stereo audio, output wants mono: take first channel
                                         array = array[0]
+                                    elif len(array.shape) == 1 and config.AUDIO_OUTPUT_CHANNELS == 2:
+                                        # Mono input but stereo output requested: duplicate to both channels
+                                        array = np.array([array, array])
                                     
                                     # Scale to int16 range
                                     audio_array = (np.clip(array, -1.0, 1.0) * 32767).astype(np.int16)
@@ -405,8 +415,9 @@ class WebRTCClient:
                                 elif array.dtype == np.int16:
                                     # Already int16
                                     
-                                    # Handle stereo-to-mono with SUM+CLIP (preserves volume)
-                                    if is_stereo and config.AUDIO_CHANNELS == 1:
+                                    # Handle channel conversion
+                                    if is_stereo and config.AUDIO_OUTPUT_CHANNELS == 1:
+                                        # Convert stereo to mono (mix both channels with SUM+CLIP to preserve volume)
                                         # Reshape if needed for interleaved data
                                         if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
                                             # Interleaved stereo: reshape to planar
@@ -427,11 +438,22 @@ class WebRTCClient:
                                         else:
                                             # Unknown: use first channel or flatten
                                             audio_array = array[0] if len(array.shape) == 2 else array
-                                    elif len(array.shape) == 2:
-                                        # Multi-channel: take first channel
+                                    elif is_stereo and config.AUDIO_OUTPUT_CHANNELS == 2:
+                                        # Keep stereo as-is, just ensure proper shape
+                                        # Reshape if needed for interleaved data
+                                        if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
+                                            # Interleaved stereo: reshape to planar [2, samples]
+                                            array = array.reshape(2, frame.samples)
+                                        # If already planar [2, samples], keep as-is
+                                        audio_array = array
+                                    elif len(array.shape) == 2 and config.AUDIO_OUTPUT_CHANNELS == 1:
+                                        # Multi-channel non-stereo audio, output wants mono: take first channel
                                         audio_array = array[0]
+                                    elif len(array.shape) == 1 and config.AUDIO_OUTPUT_CHANNELS == 2:
+                                        # Mono input but stereo output requested: duplicate to both channels
+                                        audio_array = np.array([array, array])
                                     else:
-                                        # Already mono
+                                        # Already correct format
                                         audio_array = array
                                     
                                     if frame_count == 1:
@@ -451,37 +473,62 @@ class WebRTCClient:
                                 target_rate = config.AUDIO_SAMPLE_RATE
                                 
                                 if actual_source_rate != target_rate:
-                                    original_samples = len(audio_array)
-                                    
-                                    # Use resample_poly for better real-time performance and quality
-                                    # Calculate the up/down ratio using GCD for simplest ratio
-                                    g = gcd(int(target_rate), int(actual_source_rate))
-                                    up = int(target_rate // g)
-                                    down = int(actual_source_rate // g)
-                                    
-                                    if frame_count == 1:
-                                        logger.info(
-                                            f"Resampling OpenAI audio: {actual_source_rate}Hz -> {target_rate}Hz "
-                                            f"(ratio {up}:{down}, {original_samples} samples -> {int(original_samples * up / down)} samples)"
-                                        )
-                                        logger.info(
-                                            f"Note: frame.sample_rate={frame.sample_rate}Hz (metadata) but treating as "
-                                            f"{actual_source_rate}Hz (OpenAI's actual rate)"
-                                        )
-                                    
-                                    # Resample using polyphase method with Kaiser window for better quality
-                                    # Kaiser window (beta=5.0) provides better anti-aliasing to reduce modulation artifacts
-                                    audio_array = signal.resample_poly(audio_array, up, down, window=('kaiser', 5.0)).astype(np.int16)
-                                    
-                                    if frame_count == 1:
-                                        logger.info(
-                                            f"Resampled audio: {original_samples} samples -> {len(audio_array)} samples"
-                                        )
+                                    # Handle resampling for both mono and stereo
+                                    if len(audio_array.shape) == 2 and audio_array.shape[0] == 2:
+                                        # Stereo: resample each channel independently
+                                        original_samples = audio_array.shape[1]
+                                        target_samples = int(original_samples * target_rate / actual_source_rate)
+                                        
+                                        if frame_count == 1:
+                                            logger.info(
+                                                f"Resampling stereo OpenAI audio: {actual_source_rate}Hz -> {target_rate}Hz "
+                                                f"({original_samples} samples per channel -> {target_samples} samples per channel)"
+                                            )
+                                            logger.info("Using FFT-based resampling for high quality 2:1 downsampling")
+                                        
+                                        # Resample each channel
+                                        left_resampled = signal.resample(audio_array[0], target_samples)
+                                        right_resampled = signal.resample(audio_array[1], target_samples)
+                                        
+                                        # Clip and convert to int16
+                                        left_int16 = np.clip(left_resampled, -32768, 32767).astype(np.int16)
+                                        right_int16 = np.clip(right_resampled, -32768, 32767).astype(np.int16)
+                                        
+                                        # Stack back to planar [2, samples]
+                                        audio_array = np.array([left_int16, right_int16])
+                                        
+                                    else:
+                                        # Mono: resample as before
+                                        original_samples = len(audio_array)
+                                        target_samples = int(original_samples * target_rate / actual_source_rate)
+                                        
+                                        if frame_count == 1:
+                                            logger.info(
+                                                f"Resampling mono OpenAI audio: {actual_source_rate}Hz -> {target_rate}Hz "
+                                                f"({original_samples} samples -> {target_samples} samples)"
+                                            )
+                                            logger.info("Using FFT-based resampling for high quality 2:1 downsampling")
+                                        
+                                        resampled_float = signal.resample(audio_array, target_samples)
+                                        audio_array = np.clip(resampled_float, -32768, 32767).astype(np.int16)
                                 else:
                                     if frame_count == 1:
                                         logger.info(
                                             f"No resampling needed: actual rate {actual_source_rate}Hz matches output rate {target_rate}Hz"
                                         )
+                                
+                                # Convert stereo planar to interleaved if needed (PyAudio expects interleaved)
+                                if len(audio_array.shape) == 2 and audio_array.shape[0] == 2:
+                                    # Planar stereo [2, samples] -> Interleaved [samples*2] (L,R,L,R,L,R...)
+                                    left_channel = audio_array[0]
+                                    right_channel = audio_array[1]
+                                    interleaved = np.empty((audio_array.shape[1] * 2,), dtype=np.int16)
+                                    interleaved[0::2] = left_channel   # Left channel at even indices
+                                    interleaved[1::2] = right_channel  # Right channel at odd indices
+                                    audio_array = interleaved
+                                    
+                                    if frame_count == 1:
+                                        logger.info("Converted stereo planar to interleaved format for PyAudio")
                                 
                                 # Convert to bytes
                                 audio_data = audio_array.tobytes()
@@ -629,10 +676,10 @@ class WebRTCClient:
                 f"  Size: {total_bytes} bytes ({duration_sec:.1f}s)"
             )
             logger.info(
-                f"  Format: {config.AUDIO_SAMPLE_RATE}Hz, {config.AUDIO_CHANNELS}ch, 16-bit PCM"
+                f"  Format: {config.AUDIO_SAMPLE_RATE}Hz, {config.AUDIO_OUTPUT_CHANNELS}ch, 16-bit PCM"
             )
             logger.info(
-                f"  To play: aplay -f S16_LE -r {config.AUDIO_SAMPLE_RATE} -c {config.AUDIO_CHANNELS} {filepath}"
+                f"  To play: aplay -f S16_LE -r {config.AUDIO_SAMPLE_RATE} -c {config.AUDIO_OUTPUT_CHANNELS} {filepath}"
             )
             
         except Exception as e:
