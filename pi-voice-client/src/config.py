@@ -25,7 +25,7 @@ class Config:
 
     # Audio Configuration
     # AUDIO_SAMPLE_RATE: Playback sample rate (must be supported by your USB device)
-    # OpenAI sends 96kHz audio which is automatically resampled to match this rate
+    # OpenAI sends 48kHz audio via WebRTC (matching most USB audio devices)
     AUDIO_SAMPLE_RATE: int = int(os.getenv("AUDIO_SAMPLE_RATE", "48000"))
     
     # Microphone input is always MONO (OpenAI requires mono input)

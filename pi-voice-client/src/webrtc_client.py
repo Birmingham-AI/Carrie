@@ -12,7 +12,6 @@ import time
 import numpy as np
 from typing import Optional, Callable
 import httpx
-from scipy import signal
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from av import AudioFrame as AVAudioFrame
 from .config import config
@@ -336,10 +335,6 @@ class WebRTCClient:
                                 f"Output stream configured for: {config.AUDIO_SAMPLE_RATE}Hz, "
                                 f"channels: {config.AUDIO_OUTPUT_CHANNELS}"
                             )
-                            logger.warning(
-                                f"OpenAI metadata reports {frame.sample_rate}Hz, but actual audio data is 96kHz. "
-                                f"Will treat as 96kHz and resample to {config.AUDIO_SAMPLE_RATE}Hz for playback."
-                            )
                         elif frame_count % 250 == 0:  # Log every 250 frames (less verbose)
                             logger.info(f"Received {frame_count} audio frames from OpenAI")
                         
@@ -348,190 +343,70 @@ class WebRTCClient:
                                 # Convert AudioFrame to bytes (PCM 16-bit)
                                 import numpy as np
 
-                                # Convert to numpy array (in native format)
+                                # Convert to numpy array (simple, no resampling needed)
                                 array = frame.to_ndarray()
-
-                                # Detect layout information FIRST (before any conversion)
-                                is_stereo = False
-                                num_channels = 1
-                                try:
-                                    if hasattr(frame.layout, 'name'):
-                                        is_stereo = frame.layout.name == 'stereo'
-                                    if hasattr(frame.layout, 'channels'):
-                                        num_channels = len(frame.layout.channels)
-                                    elif hasattr(frame.layout, 'channel_count'):
-                                        num_channels = frame.layout.channel_count
-                                except:
-                                    pass
-
-                                # Log first frame details
+                                
+                                # Log first frame info
                                 if frame_count == 1:
                                     logger.info(
-                                        f"Frame format: layout={frame.layout}, dtype={array.dtype}, "
-                                        f"shape={array.shape}, samples={frame.samples}"
+                                        f"Received audio: sample_rate={frame.sample_rate}Hz, "
+                                        f"samples={frame.samples}, format={array.dtype}, shape={array.shape}"
                                     )
-
-                                # Handle dtype conversion and stereo-to-mono in one pass
+                                
+                                # Handle data type conversion (float to int16 if needed)
                                 if array.dtype == np.float32 or array.dtype == np.float64:
-                                    # Float audio: normalized -1.0 to 1.0
-                                    
-                                    # Handle channel conversion
-                                    if is_stereo and config.AUDIO_OUTPUT_CHANNELS == 1:
-                                        # Convert stereo to mono (mix both channels)
-                                        # Reshape if needed for interleaved data
-                                        if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
-                                            # Interleaved stereo: reshape to planar
-                                            array = array.reshape(2, frame.samples)
-                                        
-                                        if len(array.shape) == 2 and array.shape[0] == 2:
-                                            # Planar stereo: average at float level (safe here)
-                                            array = (array[0] + array[1]) / 2.0
-                                        elif len(array.shape) == 1:
-                                            # Interleaved: take left channel
-                                            array = array[::2]
-                                        else:
-                                            # Unknown format: take first channel
-                                            array = array[0] if len(array.shape) == 2 else array
-                                    elif is_stereo and config.AUDIO_OUTPUT_CHANNELS == 2:
-                                        # Keep stereo as-is, just ensure proper shape
-                                        # Reshape if needed for interleaved data
-                                        if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
-                                            # Interleaved stereo: reshape to planar [2, samples]
-                                            array = array.reshape(2, frame.samples)
-                                        # If already planar [2, samples], keep as-is
-                                    elif len(array.shape) == 2 and config.AUDIO_OUTPUT_CHANNELS == 1:
-                                        # Multi-channel non-stereo audio, output wants mono: take first channel
-                                        array = array[0]
-                                    elif len(array.shape) == 1 and config.AUDIO_OUTPUT_CHANNELS == 2:
-                                        # Mono input but stereo output requested: duplicate to both channels
-                                        array = np.array([array, array])
-                                    
-                                    # Scale to int16 range
+                                    # Scale float [-1.0, 1.0] to int16 [-32768, 32767]
                                     audio_array = (np.clip(array, -1.0, 1.0) * 32767).astype(np.int16)
-                                    
-                                    if frame_count == 1:
-                                        logger.info(f"Converted float to int16, shape={audio_array.shape}, max_amp={np.abs(audio_array).max()}")
-
                                 elif array.dtype == np.int16:
-                                    # Already int16
-                                    
-                                    # Handle channel conversion
-                                    if is_stereo and config.AUDIO_OUTPUT_CHANNELS == 1:
-                                        # Convert stereo to mono (mix both channels with SUM+CLIP to preserve volume)
-                                        # Reshape if needed for interleaved data
-                                        if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
-                                            # Interleaved stereo: reshape to planar
-                                            array = array.reshape(2, frame.samples)
-                                        
-                                        if len(array.shape) == 2 and array.shape[0] == 2:
-                                            # Planar stereo: SUM and clip (preserves volume)
-                                            audio_array = np.clip(
-                                                array[0].astype(np.int32) + array[1].astype(np.int32),
-                                                -32768, 32767
-                                            ).astype(np.int16)
-                                            
-                                            if frame_count == 1:
-                                                logger.info(f"Stereo->mono with sum+clip, max_amp={np.abs(audio_array).max()}")
-                                        elif len(array.shape) == 1:
-                                            # Interleaved: take left channel
-                                            audio_array = array[::2]
-                                        else:
-                                            # Unknown: use first channel or flatten
-                                            audio_array = array[0] if len(array.shape) == 2 else array
-                                    elif is_stereo and config.AUDIO_OUTPUT_CHANNELS == 2:
-                                        # Keep stereo as-is, just ensure proper shape
-                                        # Reshape if needed for interleaved data
-                                        if len(array.shape) == 2 and array.shape[0] == 1 and array.shape[1] == frame.samples * 2:
-                                            # Interleaved stereo: reshape to planar [2, samples]
-                                            array = array.reshape(2, frame.samples)
-                                        # If already planar [2, samples], keep as-is
-                                        audio_array = array
-                                    elif len(array.shape) == 2 and config.AUDIO_OUTPUT_CHANNELS == 1:
-                                        # Multi-channel non-stereo audio, output wants mono: take first channel
-                                        audio_array = array[0]
-                                    elif len(array.shape) == 1 and config.AUDIO_OUTPUT_CHANNELS == 2:
-                                        # Mono input but stereo output requested: duplicate to both channels
-                                        audio_array = np.array([array, array])
-                                    else:
-                                        # Already correct format
-                                        audio_array = array
-                                    
-                                    if frame_count == 1:
-                                        logger.info(f"Using int16 audio, shape={audio_array.shape}, max_amp={np.abs(audio_array).max()}")
+                                    audio_array = array
                                 else:
-                                    # Unexpected dtype: convert to int16
-                                    logger.warning(f"Unexpected dtype {array.dtype}, converting to int16")
+                                    logger.warning(f"Unexpected audio dtype: {array.dtype}, converting to int16")
                                     audio_array = array.astype(np.int16)
-                                    if len(array.shape) == 2:
-                                        audio_array = array[0]
-
-                                # Resample if sample rate mismatch
-                                # IMPORTANT: OpenAI sends 96kHz audio but frame.sample_rate may incorrectly report 48kHz
-                                # Always treat OpenAI audio as 96kHz regardless of frame metadata
-                                # Using Kaiser window for high-quality downsampling to reduce aliasing artifacts
-                                actual_source_rate = 96000  # OpenAI's actual output rate
-                                target_rate = config.AUDIO_SAMPLE_RATE
                                 
-                                if actual_source_rate != target_rate:
-                                    # Handle resampling for both mono and stereo
-                                    if len(audio_array.shape) == 2 and audio_array.shape[0] == 2:
-                                        # Stereo: resample each channel independently
-                                        original_samples = audio_array.shape[1]
-                                        target_samples = int(original_samples * target_rate / actual_source_rate)
+                                # Handle stereo/mono channel layout
+                                if len(audio_array.shape) == 2:
+                                    if audio_array.shape[0] == 2 and config.AUDIO_OUTPUT_CHANNELS == 2:
+                                        # Stereo to stereo: convert planar [2, samples] to interleaved [samples*2]
+                                        left_channel = audio_array[0]
+                                        right_channel = audio_array[1]
+                                        interleaved = np.empty((audio_array.shape[1] * 2,), dtype=np.int16)
+                                        interleaved[0::2] = left_channel
+                                        interleaved[1::2] = right_channel
+                                        audio_array = interleaved
                                         
                                         if frame_count == 1:
-                                            logger.info(
-                                                f"Resampling stereo OpenAI audio: {actual_source_rate}Hz -> {target_rate}Hz "
-                                                f"({original_samples} samples per channel -> {target_samples} samples per channel)"
-                                            )
-                                            logger.info("Using FFT-based resampling for high quality 2:1 downsampling")
+                                            logger.info("Output: stereo interleaved for 2-channel playback")
+                                            
+                                    elif audio_array.shape[0] == 2 and config.AUDIO_OUTPUT_CHANNELS == 1:
+                                        # Stereo to mono: average channels
+                                        audio_array = ((audio_array[0].astype(np.int32) + audio_array[1].astype(np.int32)) // 2).astype(np.int16)
                                         
-                                        # Resample each channel
-                                        left_resampled = signal.resample(audio_array[0], target_samples)
-                                        right_resampled = signal.resample(audio_array[1], target_samples)
-                                        
-                                        # Clip and convert to int16
-                                        left_int16 = np.clip(left_resampled, -32768, 32767).astype(np.int16)
-                                        right_int16 = np.clip(right_resampled, -32768, 32767).astype(np.int16)
-                                        
-                                        # Stack back to planar [2, samples]
-                                        audio_array = np.array([left_int16, right_int16])
-                                        
+                                        if frame_count == 1:
+                                            logger.info("Output: mono (averaged from stereo)")
                                     else:
-                                        # Mono: resample as before
-                                        original_samples = len(audio_array)
-                                        target_samples = int(original_samples * target_rate / actual_source_rate)
-                                        
-                                        if frame_count == 1:
-                                            logger.info(
-                                                f"Resampling mono OpenAI audio: {actual_source_rate}Hz -> {target_rate}Hz "
-                                                f"({original_samples} samples -> {target_samples} samples)"
-                                            )
-                                            logger.info("Using FFT-based resampling for high quality 2:1 downsampling")
-                                        
-                                        resampled_float = signal.resample(audio_array, target_samples)
-                                        audio_array = np.clip(resampled_float, -32768, 32767).astype(np.int16)
-                                else:
-                                    if frame_count == 1:
-                                        logger.info(
-                                            f"No resampling needed: actual rate {actual_source_rate}Hz matches output rate {target_rate}Hz"
-                                        )
-                                
-                                # Convert stereo planar to interleaved if needed (PyAudio expects interleaved)
-                                if len(audio_array.shape) == 2 and audio_array.shape[0] == 2:
-                                    # Planar stereo [2, samples] -> Interleaved [samples*2] (L,R,L,R,L,R...)
-                                    left_channel = audio_array[0]
-                                    right_channel = audio_array[1]
-                                    interleaved = np.empty((audio_array.shape[1] * 2,), dtype=np.int16)
-                                    interleaved[0::2] = left_channel   # Left channel at even indices
-                                    interleaved[1::2] = right_channel  # Right channel at odd indices
-                                    audio_array = interleaved
+                                        # Take first channel
+                                        audio_array = audio_array[0]
+                                elif len(audio_array.shape) == 1 and config.AUDIO_OUTPUT_CHANNELS == 2:
+                                    # Mono to stereo: duplicate to both channels
+                                    mono = audio_array
+                                    audio_array = np.empty((len(mono) * 2,), dtype=np.int16)
+                                    audio_array[0::2] = mono  # Left
+                                    audio_array[1::2] = mono  # Right
                                     
                                     if frame_count == 1:
-                                        logger.info("Converted stereo planar to interleaved format for PyAudio")
+                                        logger.info("Output: stereo (duplicated from mono)")
                                 
                                 # Convert to bytes
                                 audio_data = audio_array.tobytes()
+                                
+                                # Log audio quality check on first frame
+                                if frame_count == 1:
+                                    non_zero = np.count_nonzero(audio_array)
+                                    max_amp = np.abs(audio_array).max()
+                                    logger.info(
+                                        f"Audio quality: {len(audio_data)} bytes, "
+                                        f"non-zero: {non_zero}/{len(audio_array)}, max_amp: {max_amp}"
+                                    )
                                 
                                 # Check audio quality periodically (not just first frame)
                                 if frame_count == 1:

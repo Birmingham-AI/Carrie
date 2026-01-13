@@ -180,8 +180,8 @@ Edit `.env` file to customize:
 - `BUTTON_GPIO_PIN`: GPIO pin for button
 - `AUDIO_SAMPLE_RATE`: Audio sample rate for playback (default: 48000 Hz)
   - Must match a rate supported by your USB audio device
-  - OpenAI sends 96kHz audio which is automatically resampled to this rate
-  - Most USB devices support 48000Hz but not 96000Hz
+  - OpenAI sends 48kHz audio via WebRTC
+  - 48000Hz is supported by most USB audio devices
 - `AUDIO_CHANNELS`: Audio channels (1 = mono, 2 = stereo)
 - `AUDIO_CHUNK_SIZE`: Audio buffer size in frames
 - `DEBUG_AUDIO_RECORDING`: Enable debug audio recording (default: false)
