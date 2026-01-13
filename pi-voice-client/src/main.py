@@ -44,6 +44,9 @@ class VoiceClientApp:
         # Response text accumulation for voice trace
         self.response_text = ""
         
+        # Function call tracking
+        self.pending_function_calls: dict = {}
+        
         # Event loop reference for thread-safe scheduling
         self.loop: Optional[asyncio.AbstractEventLoop] = None
 
@@ -154,6 +157,31 @@ class VoiceClientApp:
             if item.get("type") == "message":
                 logger.info("Assistant response started")
                 self.response_text = ""  # Reset for new response
+            elif item.get("type") == "function_call" and item.get("call_id"):
+                # Function call started - track it
+                call_id = item["call_id"]
+                self.pending_function_calls[call_id] = {
+                    "name": item.get("name", ""),
+                    "arguments": ""
+                }
+                logger.info(f"Function call started: {call_id}")
+
+        elif event_type == "response.function_call_arguments.delta":
+            # Function call arguments streaming in
+            call_id = event.get("call_id", "")
+            delta = event.get("delta", "")
+            name = event.get("name")
+            
+            if call_id in self.pending_function_calls:
+                self.pending_function_calls[call_id]["arguments"] += delta
+                if name:
+                    self.pending_function_calls[call_id]["name"] = name
+            else:
+                # First delta, create entry
+                self.pending_function_calls[call_id] = {
+                    "name": name or "",
+                    "arguments": delta
+                }
 
         elif event_type == "response.done":
             # Response completed
@@ -171,18 +199,82 @@ class VoiceClientApp:
         elif event_type == "response.function_call_arguments.done":
             # Function call completed
             call_id = event.get("call_id", "")
-            name = event.get("name", "")
-            arguments = event.get("arguments", "")
-            if name and self.voice_trace_client:
-                asyncio.create_task(
-                    self.voice_trace_client.log_function_call(name, arguments)
+            
+            # Get function call info (from deltas or from done event)
+            if call_id in self.pending_function_calls:
+                func_call = self.pending_function_calls.pop(call_id)
+                name = func_call["name"] or event.get("name", "")
+                arguments = func_call["arguments"] or event.get("arguments", "")
+            else:
+                name = event.get("name", "")
+                arguments = event.get("arguments", "")
+            
+            logger.info(f"Function call completed: {name}({arguments})")
+            
+            # Execute function and send result back
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(
+                    self._execute_and_send_function_result(call_id, name, arguments),
+                    self.loop
                 )
-            logger.info(f"Function call: {name}({arguments})")
 
         elif event_type == "error":
             # Error occurred
             error_msg = event.get("error", {}).get("message", "Unknown error")
             logger.error(f"Realtime API error: {error_msg}")
+
+    async def _execute_and_send_function_result(
+        self, call_id: str, name: str, arguments: str
+    ) -> None:
+        """Execute function and send result back to OpenAI."""
+        try:
+            from .function_executors import execute_function
+            
+            # Execute function
+            result = await execute_function(name, arguments)
+            
+            # Log to voice trace
+            if self.voice_trace_client:
+                await self.voice_trace_client.log_function_call(
+                    name, arguments, result["output"]
+                )
+            
+            logger.info(f"Function result: {result['output'][:100]}...")
+            
+            # Send result back to OpenAI
+            if self.webrtc_client:
+                await self.webrtc_client.send_event({
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "function_call_output",
+                        "call_id": call_id,
+                        "output": result["output"]
+                    }
+                })
+                
+                # Request new response
+                await self.webrtc_client.send_event({
+                    "type": "response.create"
+                })
+                
+                logger.info("Function result sent, requested new response")
+            
+        except Exception as e:
+            logger.error(f"Error executing function {name}: {e}", exc_info=True)
+            
+            # Send error back to OpenAI
+            if self.webrtc_client:
+                await self.webrtc_client.send_event({
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "function_call_output",
+                        "call_id": call_id,
+                        "output": f"Error executing function: {str(e)}"
+                    }
+                })
+                await self.webrtc_client.send_event({
+                    "type": "response.create"
+                })
 
     def _on_button_press(self) -> None:
         """Handle button press (start recording)."""
