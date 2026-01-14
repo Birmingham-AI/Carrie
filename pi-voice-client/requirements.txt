@@ -1,0 +1,27 @@
+# WebRTC support
+aiortc>=1.6.0
+av>=11.0.0  # 11.0.0+ required for NumPy 2.0 compatibility
+
+# Audio I/O
+pyaudio>=0.2.14
+
+# GPIO button handling
+# Note: Requires system packages: build-essential, python3-dev, swig, liblgpio-dev
+# Install with: sudo apt-get install -y build-essential python3-dev swig liblgpio-dev
+# The liblgpio-dev package provides the system lgpio library that rpi-lgpio links against
+rpi-lgpio>=0.2.0.0  # Use rpi-lgpio instead of RPi.GPIO for newer kernel compatibility
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# HTTP client for API calls
+httpx>=0.27.0
+
+# NumPy for audio processing
+numpy>=2.0.0  # Requires NumPy 2.x (1.x is end-of-life)
+
+# Audio resampling for sample rate conversion
+scipy>=1.11.0
+
+# Async operations (built-in, but listed for clarity)
+# asyncio is part of Python standard library
