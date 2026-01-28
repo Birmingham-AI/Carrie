@@ -74,6 +74,18 @@ These are required for building PyAudio and rpi-lgpio. Without them, `pip instal
    - Connect other side to GND
    - Optional: Add 10kΩ pull-up resistor between GPIO pin and 3.3V
 
+## Hardware Wiring Diagram
+
+See the complete wiring layout diagram for Carrie hardware setup:
+
+![Carrie Raspberry Pi Wiring Layout](Carrie-Raspberry-Pi-layout.png)
+
+The diagram shows:
+- AlpenGlow Big Red Button connected to GPIO (default: GPIO 22)
+- USB Conference Phone (speaker/microphone)
+- LED indicator connections
+- Complete Raspberry Pi 4 Model B pinout
+
 ## GPIO Pin Configuration
 
 Default button pin: **GPIO 22** (Physical pin 15)

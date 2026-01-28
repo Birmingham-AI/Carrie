@@ -1,0 +1,36 @@
+[Unit]
+Description=WillAIam Voice Client
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/willAIam/pi-voice-client
+Environment="PATH=/home/pi/willAIam/pi-voice-client/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Load environment variables from .env file
+EnvironmentFile=/home/pi/willAIam/pi-voice-client/.env
+
+# Run the application
+ExecStart=/home/pi/willAIam/pi-voice-client/venv/bin/python -m src.main
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=willAIam-voice
+
+# Security settings
+NoNewPrivileges=false
+PrivateTmp=true
+
+# Allow access to GPIO
+SupplementaryGroups=gpio
+
+[Install]
+WantedBy=multi-user.target
