@@ -61,6 +61,20 @@ RAG-powered knowledge base for the Birmingham AI community. Named after Carrie A
 - **Streaming responses**: Real-time AI answers with source citations
 - **Web search integration**: Optional web search for additional context
 
+## Architecture
+
+### System Overview
+
+![Carrie Architecture](drawings/carrie-architecture.svg)
+
+### Agent Tool Routing
+
+![Agent Tool Routing](drawings/agent-tool-routing.svg)
+
+### Content Ingestion Pipeline
+
+![Content Ingestion Pipeline](drawings/content-ingestion-pipeline.svg)
+
 ## Project Structure
 
 ```

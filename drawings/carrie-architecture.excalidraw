@@ -1,0 +1,85 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {"type":"rectangle","id":"fe_bg","x":80,"y":180,"width":510,"height":125,"strokeColor":"#4a9eed","backgroundColor":"#dbe4ff","fillStyle":"solid","strokeWidth":1,"roughness":1,"opacity":40,"roundness":{"type":3}},
+    {"type":"rectangle","id":"be_bg","x":70,"y":340,"width":870,"height":195,"strokeColor":"#8b5cf6","backgroundColor":"#e5dbff","fillStyle":"solid","strokeWidth":1,"roughness":1,"opacity":40,"roundness":{"type":3}},
+    {"type":"rectangle","id":"agent_bg","x":90,"y":378,"width":380,"height":138,"strokeColor":"#8b5cf6","backgroundColor":"#d0bfff","fillStyle":"solid","strokeWidth":1,"roughness":1,"opacity":55,"roundness":{"type":3}},
+    {"type":"rectangle","id":"ext_bg","x":50,"y":600,"width":910,"height":80,"strokeColor":"#22c55e","backgroundColor":"#d3f9d8","fillStyle":"solid","strokeWidth":1,"roughness":1,"opacity":35,"roundness":{"type":3}},
+
+    {"type":"text","id":"title","x":255,"y":10,"width":500,"height":35,"strokeColor":"#1e1e1e","text":"Carrie — High-Level Architecture","fontSize":28,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+    {"type":"text","id":"sub","x":278,"y":46,"width":440,"height":23,"strokeColor":"#757575","text":"Birmingham AI Knowledge Base & Voice Assistant","fontSize":18,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+    {"type":"text","id":"fe_lbl","x":105,"y":187,"width":320,"height":23,"strokeColor":"#2563eb","text":"Frontend — React + TypeScript","fontSize":18,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+    {"type":"text","id":"be_lbl","x":100,"y":347,"width":300,"height":23,"strokeColor":"#6d28d9","text":"Backend — FastAPI + Python","fontSize":18,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+    {"type":"text","id":"agent_lbl","x":115,"y":386,"width":200,"height":25,"strokeColor":"#1e1e1e","text":"Carrie Agent","fontSize":20,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+    {"type":"text","id":"agent_sub","x":115,"y":412,"width":200,"height":18,"strokeColor":"#757575","text":"OpenAI Agents SDK","fontSize":14,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+    {"type":"text","id":"tools_lbl","x":115,"y":440,"width":60,"height":18,"strokeColor":"#555555","text":"Tools:","fontSize":14,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+    {"type":"text","id":"ext_lbl","x":75,"y":606,"width":200,"height":23,"strokeColor":"#15803d","text":"External Services","fontSize":18,"fontFamily":1,"textAlign":"left","verticalAlign":"top"},
+
+    {"type":"rectangle","id":"browser","x":190,"y":88,"width":180,"height":55,"strokeColor":"#1e1e1e","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"browser_t","type":"text"},{"id":"a1","type":"arrow"}]},
+    {"type":"text","id":"browser_t","x":214,"y":103,"width":132,"height":25,"strokeColor":"#1e1e1e","text":"Web Browser","fontSize":20,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"browser","originalText":"Web Browser"},
+
+    {"type":"rectangle","id":"rpi","x":620,"y":88,"width":190,"height":55,"strokeColor":"#22c55e","backgroundColor":"#b2f2bb","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"rpi_t","type":"text"},{"id":"a2","type":"arrow"}]},
+    {"type":"text","id":"rpi_t","x":636,"y":103,"width":158,"height":25,"strokeColor":"#1e1e1e","text":"Raspberry Pi 4","fontSize":20,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"rpi","originalText":"Raspberry Pi 4"},
+
+    {"type":"rectangle","id":"chat","x":100,"y":225,"width":130,"height":50,"strokeColor":"#1e1e1e","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"chat_t","type":"text"}]},
+    {"type":"text","id":"chat_t","x":127,"y":239,"width":76,"height":23,"strokeColor":"#1e1e1e","text":"Chat UI","fontSize":18,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"chat","originalText":"Chat UI"},
+
+    {"type":"rectangle","id":"upload_ui","x":255,"y":225,"width":130,"height":50,"strokeColor":"#1e1e1e","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"upload_ui_t","type":"text"}]},
+    {"type":"text","id":"upload_ui_t","x":274,"y":239,"width":92,"height":23,"strokeColor":"#1e1e1e","text":"Upload UI","fontSize":18,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"upload_ui","originalText":"Upload UI"},
+
+    {"type":"rectangle","id":"voiceui","x":410,"y":225,"width":150,"height":50,"strokeColor":"#1e1e1e","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"voiceui_t","type":"text"}]},
+    {"type":"text","id":"voiceui_t","x":433,"y":242,"width":104,"height":20,"strokeColor":"#1e1e1e","text":"Voice WebRTC","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"voiceui","originalText":"Voice WebRTC"},
+
+    {"type":"rectangle","id":"rag_tool","x":105,"y":460,"width":80,"height":36,"strokeColor":"#06b6d4","backgroundColor":"#c3fae8","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"rag_tool_t","type":"text"}]},
+    {"type":"text","id":"rag_tool_t","x":121,"y":470,"width":48,"height":20,"strokeColor":"#1e1e1e","text":"RAG","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"rag_tool","originalText":"RAG"},
+
+    {"type":"rectangle","id":"web_tool","x":198,"y":460,"width":118,"height":36,"strokeColor":"#4a9eed","backgroundColor":"#a5d8ff","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"web_tool_t","type":"text"}]},
+    {"type":"text","id":"web_tool_t","x":209,"y":470,"width":96,"height":20,"strokeColor":"#1e1e1e","text":"Web Search","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"web_tool","originalText":"Web Search"},
+
+    {"type":"rectangle","id":"evt_tool","x":329,"y":460,"width":118,"height":36,"strokeColor":"#f59e0b","backgroundColor":"#ffd8a8","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"evt_tool_t","type":"text"}]},
+    {"type":"text","id":"evt_tool_t","x":340,"y":470,"width":96,"height":20,"strokeColor":"#1e1e1e","text":"Eventbrite","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"evt_tool","originalText":"Eventbrite"},
+
+    {"type":"rectangle","id":"rt","x":500,"y":378,"width":190,"height":60,"strokeColor":"#1e1e1e","backgroundColor":"#d0bfff","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"rt_t","type":"text"}]},
+    {"type":"text","id":"rt_t","x":520,"y":388,"width":150,"height":40,"strokeColor":"#1e1e1e","text":"Realtime Voice\nWebRTC Sessions","fontSize":14,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"rt","originalText":"Realtime Voice\nWebRTC Sessions"},
+
+    {"type":"rectangle","id":"cu","x":500,"y":452,"width":190,"height":60,"strokeColor":"#1e1e1e","backgroundColor":"#d0bfff","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"cu_t","type":"text"},{"id":"a7","type":"arrow"}]},
+    {"type":"text","id":"cu_t","x":520,"y":462,"width":150,"height":40,"strokeColor":"#1e1e1e","text":"Content Upload\nYouTube / PDF","fontSize":14,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"cu","originalText":"Content Upload\nYouTube / PDF"},
+
+    {"type":"rectangle","id":"obs","x":720,"y":378,"width":190,"height":134,"strokeColor":"#8b5cf6","backgroundColor":"#eebefa","fillStyle":"solid","strokeWidth":2,"roughness":1,"opacity":55,"roundness":{"type":3},"boundElements":[{"id":"obs_t","type":"text"},{"id":"a8","type":"arrow"}]},
+    {"type":"text","id":"obs_t","x":740,"y":425,"width":150,"height":40,"strokeColor":"#1e1e1e","text":"Observability\nLangfuse Tracing","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"obs","originalText":"Observability\nLangfuse Tracing"},
+
+    {"type":"rectangle","id":"openai","x":65,"y":632,"width":165,"height":42,"strokeColor":"#f59e0b","backgroundColor":"#ffd8a8","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"openai_t","type":"text"},{"id":"a4","type":"arrow"}]},
+    {"type":"text","id":"openai_t","x":90,"y":640,"width":115,"height":20,"strokeColor":"#1e1e1e","text":"OpenAI APIs","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"openai","originalText":"OpenAI APIs"},
+
+    {"type":"rectangle","id":"supabase","x":260,"y":632,"width":150,"height":42,"strokeColor":"#06b6d4","backgroundColor":"#c3fae8","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"supabase_t","type":"text"},{"id":"a5","type":"arrow"}]},
+    {"type":"text","id":"supabase_t","x":275,"y":640,"width":120,"height":20,"strokeColor":"#1e1e1e","text":"Supabase pgvector","fontSize":14,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"supabase","originalText":"Supabase pgvector"},
+
+    {"type":"rectangle","id":"eventbrite","x":440,"y":632,"width":135,"height":42,"strokeColor":"#f59e0b","backgroundColor":"#ffd8a8","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"eventbrite_t","type":"text"},{"id":"a6","type":"arrow"}]},
+    {"type":"text","id":"eventbrite_t","x":455,"y":640,"width":105,"height":20,"strokeColor":"#1e1e1e","text":"Eventbrite API","fontSize":14,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"eventbrite","originalText":"Eventbrite API"},
+
+    {"type":"rectangle","id":"youtube","x":605,"y":632,"width":120,"height":42,"strokeColor":"#ef4444","backgroundColor":"#ffc9c9","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"youtube_t","type":"text"},{"id":"a7","type":"arrow"}]},
+    {"type":"text","id":"youtube_t","x":620,"y":640,"width":90,"height":20,"strokeColor":"#1e1e1e","text":"YouTube API","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"youtube","originalText":"YouTube API"},
+
+    {"type":"rectangle","id":"langfuse","x":755,"y":632,"width":135,"height":42,"strokeColor":"#8b5cf6","backgroundColor":"#eebefa","fillStyle":"solid","strokeWidth":2,"roughness":1,"roundness":{"type":3},"boundElements":[{"id":"langfuse_t","type":"text"},{"id":"a8","type":"arrow"}]},
+    {"type":"text","id":"langfuse_t","x":780,"y":640,"width":85,"height":20,"strokeColor":"#1e1e1e","text":"Langfuse","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"langfuse","originalText":"Langfuse"},
+
+    {"type":"arrow","id":"a1","x":280,"y":143,"width":0,"height":37,"strokeColor":"#4a9eed","strokeWidth":2,"roughness":1,"points":[[0,0],[0,37]],"endArrowhead":"arrow","startBinding":{"elementId":"browser","focus":0,"gap":1,"fixedPoint":[0.5,1]}},
+    {"type":"arrow","id":"a2","x":715,"y":143,"width":0,"height":197,"strokeColor":"#22c55e","strokeWidth":2,"roughness":1,"points":[[0,0],[0,197]],"endArrowhead":"arrow","startBinding":{"elementId":"rpi","focus":0,"gap":1,"fixedPoint":[0.5,1]},"boundElements":[{"id":"a2_t","type":"text"}]},
+    {"type":"text","id":"a2_t","x":660,"y":232,"width":120,"height":20,"strokeColor":"#1e1e1e","text":"HTTP / WebRTC","fontSize":14,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"a2","originalText":"HTTP / WebRTC"},
+    {"type":"arrow","id":"a3","x":300,"y":305,"width":0,"height":35,"strokeColor":"#1e1e1e","strokeWidth":2,"roughness":1,"points":[[0,0],[0,35]],"endArrowhead":"arrow","boundElements":[{"id":"a3_t","type":"text"}]},
+    {"type":"text","id":"a3_t","x":252,"y":313,"width":96,"height":20,"strokeColor":"#1e1e1e","text":"SSE / REST","fontSize":14,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","containerId":"a3","originalText":"SSE / REST"},
+
+    {"type":"arrow","id":"a4","x":180,"y":516,"width":32,"height":116,"strokeColor":"#f59e0b","strokeWidth":2,"roughness":1,"points":[[0,0],[-32,116]],"endArrowhead":"arrow"},
+    {"type":"arrow","id":"a5","x":280,"y":516,"width":55,"height":116,"strokeColor":"#06b6d4","strokeWidth":2,"roughness":1,"points":[[0,0],[55,116]],"endArrowhead":"arrow"},
+    {"type":"arrow","id":"a6","x":388,"y":516,"width":120,"height":116,"strokeColor":"#f59e0b","strokeWidth":2,"roughness":1,"points":[[0,0],[120,116]],"endArrowhead":"arrow"},
+    {"type":"arrow","id":"a7","x":595,"y":512,"width":70,"height":120,"strokeColor":"#ef4444","strokeWidth":1,"strokeStyle":"dashed","roughness":1,"points":[[0,0],[70,120]],"endArrowhead":"arrow"},
+    {"type":"arrow","id":"a8","x":815,"y":512,"width":8,"height":120,"strokeColor":"#8b5cf6","strokeWidth":1,"strokeStyle":"dashed","roughness":1,"points":[[0,0],[8,120]],"endArrowhead":"arrow"}
+  ],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}
