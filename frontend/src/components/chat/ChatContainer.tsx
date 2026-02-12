@@ -15,9 +15,9 @@ const STORAGE_KEY = 'carrie_conversation_history';
 
 const EXAMPLE_PROMPTS = [
   "How many meetings happened in Nov 2025?",
-  "Summarize the Nov general meeting",
+  "Summarize the Nov 2025 general meeting",
   "When did the finance breakout start?",
-  "What topics were discussed in October marketing breakout?",
+  "What topics were discussed in October 2025 marketing breakout?",
   "Did we ever talk about Genie model in our meetings?",
   "What was the last HR breakout meeting about?",
   "Did we talk about prompt quality and context?",
