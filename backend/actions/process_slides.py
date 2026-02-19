@@ -17,6 +17,8 @@ import asyncio
 import base64
 import json
 import os
+import io
+import re
 import time
 from pathlib import Path
 from os.path import join, dirname
@@ -25,6 +27,7 @@ from typing import AsyncGenerator
 import fitz  # PyMuPDF - used only for PDF to image conversion
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
+from pypdf import PdfReader
 
 # Load environment variables (for CLI usage)
 load_dotenv(join(dirname(dirname(dirname(__file__))), ".env"))
@@ -37,24 +40,27 @@ EMBEDDINGS_DIR = "embeddings"
 VISION_MODEL = "gpt-4.1"
 
 # DPI for rendering PDF pages as images (higher = better quality but larger)
-RENDER_DPI = 150
+RENDER_DPI = 250
 
 # The prompt for slide analysis via vision
-VISION_PROMPT = """Analyze this slide image and extract the key information.
+VISION_PROMPT = """Analyze this slide image thoroughly and extract ALL information visible.
 
 Focus on:
-- The slide title
-- All text content (including any text in diagrams, charts, or images)
-- Key points and topics discussed
-- Any data, statistics, or figures shown
-- Information about AI, Machine Learning, future of work, or Birmingham AI community
+- The slide title or heading
+- All text content, including bullet points, annotations, footnotes, and captions
+- Text inside diagrams, flowcharts, architecture diagrams, or images
+- Data from tables, charts, or graphs (include actual numbers and labels)
+- Code snippets or technical terms
+- Speaker notes if visible
+- Any URLs, references, or citations shown
 
 Return as JSON with:
-- "slide_title": the title of the slide (or "Untitled" if none)
-- "key_points": an array of strings, each being a key point or piece of information from the slide
+- "slide_title": the title or main heading of the slide (or "Untitled" if none)
+- "key_points": an array of strings, each being a distinct piece of information from the slide
+- "raw_text": any additional text content not captured in key_points
 
-Be thorough - capture everything visible on the slide that would be useful for answering questions later.
-Do not hallucinate or make up information. Do not include any information that is not visible on the slide.
+Be exhaustive. Capture every piece of visible text and data. This content will be used to answer questions about the presentation later, so completeness matters more than brevity.
+Do not hallucinate or add information not visible on the slide.
 Ensure the JSON is valid and well-formed.
 """
 
@@ -88,42 +94,40 @@ class SlideProcessor:
     async def _analyze_slide_image(self, base64_image: str, page_num: int) -> dict | None:
         """Analyze slide image using GPT-4o Vision."""
         client = self._get_openai()
+        for attempt in range(2):
+            try:
+                response = await client.responses.create(
+                    model=VISION_MODEL,
+                    input=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "input_text", "text": VISION_PROMPT},
+                                {
+                                    "type": "input_image",
+                                    "image_url": f"data:image/png;base64,{base64_image}",
+                                },
+                            ],
+                        }
+                    ],
+                )
 
-        try:
-            response = await client.responses.create(
-                model=VISION_MODEL,
-                input=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "input_text", "text": VISION_PROMPT},
-                            {
-                                "type": "input_image",
-                                "image_url": f"data:image/png;base64,{base64_image}",
-                            },
-                        ],
-                    }
-                ],
-            )
+                # Try to extract JSON from response
+                response_text = response.output_text
+                json_match = re.search(r'\{[\s\S]*\}', response_text)
+                if json_match:
+                    return json.loads(json_match.group())
+                return json.loads(response_text.strip())
 
-            # Parse the JSON response
-            response_text = response.output_text
-
-            # Try to extract JSON from the response
-            # Sometimes the model wraps it in markdown code blocks
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0]
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0]
-
-            return json.loads(response_text.strip())
-
-        except json.JSONDecodeError as e:
-            print(f"    Warning: Could not parse JSON for page {page_num}: {e}")
-            return None
-        except Exception as e:
-            print(f"    Warning: Vision analysis failed for page {page_num}: {e}")
-            return None
+            except json.JSONDecodeError as e:
+                print(f"    Warning: Could not parse JSON for page {page_num}: {e}")
+                return None
+            except Exception as e:
+                if attempt == 0:
+                    await asyncio.sleep(1)
+                    continue
+                print(f"    Warning: Vision analysis failed for page {page_num}: {e}")
+                return None
 
     def _extract_text_from_analysis(self, analysis: dict | None) -> str:
         """Extract readable text from analysis for embedding."""
@@ -139,6 +143,9 @@ class SlideProcessor:
             for point in analysis["key_points"]:
                 if isinstance(point, str):
                     text_parts.append(point)
+
+        if analysis.get("raw_text"):
+            text_parts.append(analysis["raw_text"])
 
         return "\n".join(text_parts)
 
@@ -174,6 +181,7 @@ class SlideProcessor:
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
             total_pages = len(doc)
             print(f"Found {total_pages} pages")
+            reader = PdfReader(io.BytesIO(pdf_bytes))
 
             for page_num, page in enumerate(doc, start=1):
                 start_time = time.time()
@@ -185,6 +193,19 @@ class SlideProcessor:
                 # Analyze with vision
                 analysis = await self._analyze_slide_image(base64_image, page_num)
                 text = self._extract_text_from_analysis(analysis)
+
+                # If vision returned nothing useful, try raw text extraction
+                if not text.strip() or len(text.strip()) < 20:
+                    if page_num - 1 < len(reader.pages):
+                        raw_text = reader.pages[page_num - 1].extract_text() or ""
+                        if raw_text.strip():
+                            vision_text = text.strip()
+                            fallback_text = raw_text.strip()
+                            text = (
+                                f"{vision_text}\n{fallback_text}"
+                                if vision_text and fallback_text not in vision_text
+                                else fallback_text
+                            )
 
                 # Skip if no content extracted
                 if not text.strip():
