@@ -89,9 +89,7 @@ carrie/
 │   │   └── streaming_agent.py    # OpenAI agent for answers
 │   ├── actions/
 │   │   ├── transcribe_youtube.py # YouTube transcription + embedding
-│   │   ├── process_slides.py     # PDF slide extraction
-│   │   ├── embed.py              # Embedding generation
-│   │   └── bundle.py             # Embedding bundling (legacy)
+│   │   └── process_slides.py     # PDF slide extraction
 │   ├── clients/
 │   │   ├── openai.py             # Async OpenAI client
 │   │   └── supabase.py           # Async Supabase client

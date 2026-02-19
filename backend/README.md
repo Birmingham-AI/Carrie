@@ -173,10 +173,10 @@ OPENAI_API_KEY=sk-...
 
 ## Error Responses
 
-**404 Not Found** - No bundled embeddings found:
+**404 Not Found** - Source data not found:
 ```json
 {
-  "detail": "No bundled embeddings found. Run actions/bundle.py to create one."
+  "detail": "No source data available for the requested query."
 }
 ```
 
