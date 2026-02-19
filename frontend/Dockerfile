@@ -1,19 +1,14 @@
-FROM node:20-alpine
-
-# Set working directory
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Copy package.json and package-lock.json for better caching
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
-
-# Copy application code
 COPY . .
+ARG VITE_API_BASE_URL=http://localhost:8001
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
 
-# Expose port for Vite dev server
-EXPOSE 5173
-
-# Command to run the application
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]

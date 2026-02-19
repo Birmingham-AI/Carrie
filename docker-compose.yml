@@ -17,7 +17,7 @@ services:
       - ./sources:/app/sources:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/')"]
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,16 +29,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8001}
     container_name: carrie-frontend
     ports:
-      - "5174:5173"
+      - "5174:8080"
     env_file:
       - .env
     environment:
       - VITE_API_BASE_URL=http://localhost:8001
-    volumes:
-      # Mount source for hot reload
-      - ./frontend/src:/app/src
     depends_on:
       - backend
     restart: unless-stopped
