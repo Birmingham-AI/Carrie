@@ -11,4 +11,4 @@ httpx==0.28.1
 youtube-transcript-api==1.2.3
 supabase==2.24.0
 langfuse==3.10.5
-openinference-instrumentation-openai-agents
+openinference-instrumentation-openai-agents==0.1.14

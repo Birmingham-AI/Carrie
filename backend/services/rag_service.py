@@ -3,6 +3,11 @@ from typing import List, Dict
 from clients import get_supabase, get_embedding
 
 
+def escape_sql_wildcards(text: str) -> str:
+    """Escape wildcard characters for LIKE/ILIKE clauses."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 class RAGService:
     """Service for RAG operations: embedding and search"""
 
@@ -21,7 +26,8 @@ class RAGService:
         query = supabase.table("sources").select("session_info, chunk_count, processed_at").order("processed_at", desc=True)
 
         if filter_term:
-            query = query.ilike("session_info", f"%{filter_term}%")
+            sanitized_filter = escape_sql_wildcards(filter_term)
+            query = query.ilike("session_info", f"%{sanitized_filter}%")
 
         results = await query.execute()
 
@@ -56,7 +62,7 @@ class RAGService:
             "match_count": top_k
         }
         if session_filter:
-            rpc_params["session_filter"] = session_filter
+            rpc_params["session_filter"] = escape_sql_wildcards(session_filter)
 
         # Use Supabase RPC for vector similarity search
         results = await supabase.rpc("match_embeddings", rpc_params).execute()
