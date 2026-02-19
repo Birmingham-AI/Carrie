@@ -3,7 +3,7 @@ openai==2.8.0
 openai-agents==0.6.1
 pandas==2.3.3
 python-dotenv==1.2.1
-PyMuPDF==1.26.6
+pypdf
 fastapi==0.121.3
 uvicorn[standard]==0.38.0
 requests==2.32.5

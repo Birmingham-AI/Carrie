@@ -1,5 +1,5 @@
 """
-Process PDF slides and create embeddings for RAG using GPT-4o Vision.
+Process PDF slides and create embeddings for RAG using text extraction.
 
 Usage (CLI):
     python -m backend.actions.process_slides --pdf "slides/presentation.pdf" --session "Nov 2024 Birmingham AI Meetup"
@@ -14,7 +14,7 @@ Usage (Python):
 
 import argparse
 import asyncio
-import base64
+import io
 import json
 import os
 import time
@@ -22,9 +22,8 @@ from pathlib import Path
 from os.path import join, dirname
 from typing import AsyncGenerator
 
-import fitz  # PyMuPDF - used only for PDF to image conversion
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
+from pypdf import PdfReader
 
 # Load environment variables (for CLI usage)
 load_dotenv(join(dirname(dirname(dirname(__file__))), ".env"))
@@ -33,114 +32,16 @@ from clients import get_embedding
 
 EMBEDDINGS_DIR = "embeddings"
 
-# OpenAI model for vision analysis
-VISION_MODEL = "gpt-4.1"
-
-# DPI for rendering PDF pages as images (higher = better quality but larger)
-RENDER_DPI = 150
-
-# The prompt for slide analysis via vision
-VISION_PROMPT = """Analyze this slide image and extract the key information.
-
-Focus on:
-- The slide title
-- All text content (including any text in diagrams, charts, or images)
-- Key points and topics discussed
-- Any data, statistics, or figures shown
-- Information about AI, Machine Learning, future of work, or Birmingham AI community
-
-Return as JSON with:
-- "slide_title": the title of the slide (or "Untitled" if none)
-- "key_points": an array of strings, each being a key point or piece of information from the slide
-
-Be thorough - capture everything visible on the slide that would be useful for answering questions later.
-Do not hallucinate or make up information. Do not include any information that is not visible on the slide.
-Ensure the JSON is valid and well-formed.
-"""
-
-
 class SlideProcessor:
-    """Process PDF slides using GPT-4o Vision and create embeddings for RAG."""
+    """Process PDF slides using extracted page text and create embeddings for RAG."""
 
-    def __init__(self, dpi: int = RENDER_DPI):
-        """
-        Initialize the processor.
+    def __init__(self):
+        """Initialize the processor."""
 
-        Args:
-            dpi: Resolution for rendering PDF pages (default: 150)
-        """
-        self._openai_client: AsyncOpenAI | None = None
-        self.dpi = dpi
-
-    def _get_openai(self) -> AsyncOpenAI:
-        """Get or create async OpenAI client."""
-        if self._openai_client is None:
-            from os import getenv
-            self._openai_client = AsyncOpenAI(api_key=getenv("OPENAI_API_KEY"))
-        return self._openai_client
-
-    def _render_page_to_base64(self, page: fitz.Page) -> str:
-        """Render a PDF page to a base64-encoded PNG image."""
-        pix = page.get_pixmap(dpi=self.dpi)
-        png_bytes = pix.tobytes("png")
-        return base64.b64encode(png_bytes).decode("utf-8")
-
-    async def _analyze_slide_image(self, base64_image: str, page_num: int) -> dict | None:
-        """Analyze slide image using GPT-4o Vision."""
-        client = self._get_openai()
-
-        try:
-            response = await client.responses.create(
-                model=VISION_MODEL,
-                input=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "input_text", "text": VISION_PROMPT},
-                            {
-                                "type": "input_image",
-                                "image_url": f"data:image/png;base64,{base64_image}",
-                            },
-                        ],
-                    }
-                ],
-            )
-
-            # Parse the JSON response
-            response_text = response.output_text
-
-            # Try to extract JSON from the response
-            # Sometimes the model wraps it in markdown code blocks
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0]
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0]
-
-            return json.loads(response_text.strip())
-
-        except json.JSONDecodeError as e:
-            print(f"    Warning: Could not parse JSON for page {page_num}: {e}")
-            return None
-        except Exception as e:
-            print(f"    Warning: Vision analysis failed for page {page_num}: {e}")
-            return None
-
-    def _extract_text_from_analysis(self, analysis: dict | None) -> str:
-        """Extract readable text from analysis for embedding."""
-        if not analysis:
-            return ""
-
-        text_parts = []
-
-        if "slide_title" in analysis and analysis["slide_title"]:
-            text_parts.append(analysis["slide_title"])
-
-        if "key_points" in analysis and isinstance(analysis["key_points"], list):
-            for point in analysis["key_points"]:
-                if isinstance(point, str):
-                    text_parts.append(point)
-
-        return "\n".join(text_parts)
+    def _extract_page_text(self, page) -> str:
+        """Extract text from a single PDF page."""
+        text = page.extract_text()
+        return text if text else ""
 
     async def _get_embedding(self, text: str) -> list[float]:
         """Get embedding for text using shared OpenAI client."""
@@ -171,40 +72,35 @@ class SlideProcessor:
         """
         print(f"Processing: {filename}")
 
-        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-            total_pages = len(doc)
-            print(f"Found {total_pages} pages")
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        total_pages = len(reader.pages)
+        print(f"Found {total_pages} pages")
 
-            for page_num, page in enumerate(doc, start=1):
-                start_time = time.time()
-                print(f"  Processing Page {page_num}/{total_pages}...", end=" ", flush=True)
+        for page_num, page in enumerate(reader.pages, start=1):
+            start_time = time.time()
+            print(f"  Processing Page {page_num}/{total_pages}...", end=" ", flush=True)
 
-                # Render page to image
-                base64_image = self._render_page_to_base64(page)
+            text = self._extract_page_text(page)
 
-                # Analyze with vision
-                analysis = await self._analyze_slide_image(base64_image, page_num)
-                text = self._extract_text_from_analysis(analysis)
+            # Skip if no content extracted
+            if not text.strip():
+                print("Skipped (no content)")
+                continue
 
-                # Skip if no content extracted
-                if not text.strip():
-                    print("Skipped (no content)")
-                    continue
+            # Create embedding
+            embedding = await self._get_embedding(text)
 
-                # Create embedding
-                embedding = await self._get_embedding(text)
+            elapsed = time.time() - start_time
+            print(f"Done ({elapsed:.2f}s)")
 
-                elapsed = time.time() - start_time
-                print(f"Done ({elapsed:.2f}s)")
-
-                yield {
-                    "session_info": session_info,
-                    "text": text,
-                    "timestamp": f"Slide {page_num}",
-                    "embedding": embedding,
-                    "page_num": page_num,
-                    "total_pages": total_pages
-                }
+            yield {
+                "session_info": session_info,
+                "text": text,
+                "timestamp": f"Slide {page_num}",
+                "embedding": embedding,
+                "page_num": page_num,
+                "total_pages": total_pages
+            }
 
     async def process_from_bytes(
         self,
@@ -280,7 +176,7 @@ class SlideProcessor:
 
 async def async_main():
     parser = argparse.ArgumentParser(
-        description="Process PDF slides using GPT-4o Vision and create embeddings"
+        description="Process PDF slides using text extraction and create embeddings"
     )
     parser.add_argument(
         "--pdf",
@@ -305,13 +201,6 @@ async def async_main():
         action="store_true",
         help="Skip saving JSON file locally"
     )
-    parser.add_argument(
-        "--dpi",
-        type=int,
-        default=RENDER_DPI,
-        help=f"DPI for rendering pages (default: {RENDER_DPI})"
-    )
-
     args = parser.parse_args()
 
     try:
@@ -336,7 +225,7 @@ async def async_main():
             pdf_bytes = f.read()
 
         # Process and save incrementally
-        processor = SlideProcessor(dpi=args.dpi)
+        processor = SlideProcessor()
         chunks = []
 
         async for chunk in processor.stream_from_bytes(pdf_bytes, pdf_path.name, args.session):
