@@ -17,6 +17,7 @@ Usage (Python):
 import argparse
 import asyncio
 import json
+import logging
 import os
 import re
 from os.path import join, dirname
@@ -28,6 +29,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 load_dotenv(join(dirname(dirname(dirname(__file__))), ".env"))
 
 from clients import get_embedding
+
+logger = logging.getLogger(__name__)
 
 EMBEDDINGS_DIR = "embeddings"
 
@@ -131,12 +134,12 @@ class YouTubeTranscriber:
         if not video_id:
             raise ValueError(f"Could not extract video ID from: {url}")
 
-        print(f"Fetching transcript for: {video_id}")
+        logger.info(f"Fetching transcript for: {video_id}")
         transcript = self._fetch_transcript(video_id)
         full_text, char_to_time = self._build_char_to_time_map(transcript)
         sentences = self._split_into_sentences(full_text)
 
-        print(f"Processing {len(sentences)} sentences into chunks...")
+        logger.info(f"Processing {len(sentences)} sentences into chunks...")
 
         # Process chunks and embed directly
         embedded_chunks = []
@@ -155,7 +158,7 @@ class YouTubeTranscriber:
                 start_time = self._get_time_for_char_position(chunk_start_char, char_to_time)
                 start_seconds = int(start_time)
 
-                print(f"  Embedding chunk {chunk_index + 1}...", end=" ", flush=True)
+                logger.info(f"  Embedding chunk {chunk_index + 1}...")
                 embedding = await self._get_embedding(chunk_text)
 
                 embedded_chunks.append({
@@ -164,7 +167,7 @@ class YouTubeTranscriber:
                     "timestamp": f"https://www.youtube.com/watch?v={video_id}&t={start_seconds}s",
                     "embedding": embedding
                 })
-                print("Done")
+                logger.info("Done")
 
                 chunk_index += 1
 
@@ -186,7 +189,7 @@ class YouTubeTranscriber:
             start_time = self._get_time_for_char_position(chunk_start_char, char_to_time)
             start_seconds = int(start_time)
 
-            print(f"  Embedding chunk {chunk_index + 1}...", end=" ", flush=True)
+            logger.info(f"  Embedding chunk {chunk_index + 1}...")
             embedding = await self._get_embedding(chunk_text)
 
             embedded_chunks.append({
@@ -195,7 +198,7 @@ class YouTubeTranscriber:
                 "timestamp": f"https://www.youtube.com/watch?v={video_id}&t={start_seconds}s",
                 "embedding": embedding
             })
-            print("Done")
+            logger.info("Done")
 
         # Save to embeddings directory (optional)
         if save_local:
@@ -211,9 +214,9 @@ class YouTubeTranscriber:
             with open(output_path, 'w', encoding='utf-8') as f:
                 json.dump(embedded_chunks, f, indent=2, ensure_ascii=False)
 
-            print(f"\nSaved to: {output_path}")
+            logger.info(f"\nSaved to: {output_path}")
 
-        print(f"Total chunks: {len(embedded_chunks)}")
+        logger.info(f"Total chunks: {len(embedded_chunks)}")
 
         return embedded_chunks
 
@@ -274,7 +277,7 @@ async def async_main():
         )
         await transcriber.transcribe(args.url, args.session, args.output, save_local=not args.no_save)
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         raise SystemExit(1)
 
 

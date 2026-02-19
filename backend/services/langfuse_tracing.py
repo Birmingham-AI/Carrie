@@ -32,10 +32,10 @@ def init_langfuse():
     """
     global _langfuse_client
 
-    print(f"[LANGFUSE] init_langfuse called. LANGFUSE_ENABLED={LANGFUSE_ENABLED}")
+    logger.info(f"[LANGFUSE] init_langfuse called. LANGFUSE_ENABLED={LANGFUSE_ENABLED}")
 
     if not LANGFUSE_ENABLED:
-        print("[LANGFUSE] Tracing disabled")
+        logger.info("[LANGFUSE] Tracing disabled")
         return
 
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
@@ -52,11 +52,11 @@ def init_langfuse():
     )
 
     if not _langfuse_client.auth_check():
-        print(f"[LANGFUSE] Authentication FAILED for {base_url}")
+        logger.error(f"[LANGFUSE] Authentication FAILED for {base_url}")
         _langfuse_client = None
         return
 
-    print(f"[LANGFUSE] Authentication successful for {base_url}")
+    logger.info(f"[LANGFUSE] Authentication successful for {base_url}")
 
     # Set up OpenInference instrumentation to capture agent tool calls
     # Configure OTLP exporter to send to Langfuse
@@ -98,10 +98,10 @@ def create_voice_trace(session_id: str, user_id: str) -> str:
     Returns the session_id which is used to group traces.
     """
     if not _langfuse_client:
-        print("[LANGFUSE] Client not initialized - voice trace skipped")
+        logger.warning("[LANGFUSE] Client not initialized - voice trace skipped")
         return ""
 
-    print(f"[LANGFUSE] Initializing voice session: {session_id}")
+    logger.info(f"[LANGFUSE] Initializing voice session: {session_id}")
 
     # Store session info for creating per-turn traces
     _voice_sessions[session_id] = {
@@ -114,7 +114,7 @@ def create_voice_trace(session_id: str, user_id: str) -> str:
         }
     }
 
-    print(f"[LANGFUSE] Voice session initialized: {session_id}")
+    logger.info(f"[LANGFUSE] Voice session initialized: {session_id}")
     return session_id
 
 
@@ -140,11 +140,11 @@ def add_voice_generation(
         if turn["user_input"] and turn["assistant_output"]:
             _flush_turn(session_id)
         turn["user_input"] = content
-        print(f"[LANGFUSE] User transcript: {content[:50]}...")
+        logger.info(f"[LANGFUSE] User transcript: {content[:50]}...")
 
     elif event_type == "assistant_response":
         turn["assistant_output"] = content
-        print(f"[LANGFUSE] Assistant response: {content[:50]}...")
+        logger.info(f"[LANGFUSE] Assistant response: {content[:50]}...")
         # Flush the turn now that we have both input and output
         if turn["user_input"]:
             _flush_turn(session_id)
@@ -155,7 +155,7 @@ def add_voice_generation(
             "call": content,
             "result": metadata.get("result", "") if metadata else ""
         })
-        print(f"[LANGFUSE] Function call: {content[:50]}...")
+        logger.info(f"[LANGFUSE] Function call: {content[:50]}...")
 
 
 def _flush_turn(session_id: str) -> None:
@@ -217,11 +217,11 @@ def _flush_turn(session_id: str) -> None:
                         metadata={"tool_index": i}
                     )
             except Exception as e:
-                print(f"[LANGFUSE] Error creating tool span: {e}")
+                logger.error(f"[LANGFUSE] Error creating tool span: {e}")
 
         span.update(output=assistant_output)
 
-    print(f"[LANGFUSE] Flushed turn {turn_num} for session {session_id}")
+    logger.info(f"[LANGFUSE] Flushed turn {turn_num} for session {session_id}")
 
     # Reset current turn
     session["current_turn"] = {
@@ -251,4 +251,4 @@ def end_voice_trace(trace_id: str, duration_ms: int, message_count: int) -> None
     # Cleanup session
     _voice_sessions.pop(session_id, None)
     _langfuse_client.flush()
-    print(f"[LANGFUSE] Ended voice session: {session_id} ({session['turn_count']} turns, {duration_ms}ms)")
+    logger.info(f"[LANGFUSE] Ended voice session: {session_id} ({session['turn_count']} turns, {duration_ms}ms)")

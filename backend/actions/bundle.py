@@ -1,7 +1,10 @@
 import json
+import logging
 import re
 from pathlib import Path
 from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -68,4 +71,4 @@ def main() -> Path:
 
 if __name__ == "__main__":
     bundle_path = main()
-    print(f"Bundled embeddings written to {bundle_path}")
+    logger.info(f"Bundled embeddings written to {bundle_path}")
