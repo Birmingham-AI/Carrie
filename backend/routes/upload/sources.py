@@ -73,8 +73,8 @@ async def list_sources(source_type: Optional[str] = Query(None, description="Fil
         logger.info(f"Found {len(result.data)} sources")
         return {"sources": result.data}
     except Exception as e:
-        logger.error(f"Failed to fetch sources: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error details: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.delete("/sources/{source_id}", dependencies=[Depends(verify_api_key)])
@@ -120,5 +120,5 @@ async def delete_source(source_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete source: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error details: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

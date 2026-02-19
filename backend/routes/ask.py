@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
@@ -10,6 +11,7 @@ from clients.eventbrite import is_configured as eventbrite_configured
 from utils import get_client_ip
 
 router = APIRouter(prefix="/v1", tags=["chat"])
+logger = logging.getLogger(__name__)
 
 # Initialize RAG service (agent created per-request to allow web search toggle)
 rag_service = RAGService()
@@ -72,7 +74,8 @@ async def ask_question(request: Request, question_request: QuestionRequest):
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.error(f"Error details: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/search")
@@ -96,7 +99,8 @@ async def search_notes(request: Request, question: str, top_k: int = 5, session_
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.error(f"Error details: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/sessions")
@@ -116,7 +120,8 @@ async def list_sessions(request: Request, filter: str = None):
         sessions = await rag_service.list_sessions(filter)
         return {"sessions": sessions}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.error(f"Error details: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/events")
@@ -153,4 +158,5 @@ async def get_events(request: Request, action: str = "list", limit: int = 3, eve
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch events: {str(e)}")
+        logger.error(f"Error details: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
