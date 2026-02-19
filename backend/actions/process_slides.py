@@ -15,6 +15,7 @@ Usage (Python):
 import argparse
 import asyncio
 import base64
+import io
 import json
 import os
 import time
@@ -22,9 +23,9 @@ from pathlib import Path
 from os.path import join, dirname
 from typing import AsyncGenerator
 
-import fitz  # PyMuPDF - used only for PDF to image conversion
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
+from pdf2image import convert_from_bytes
 
 # Load environment variables (for CLI usage)
 load_dotenv(join(dirname(dirname(dirname(__file__))), ".env"))
@@ -79,11 +80,11 @@ class SlideProcessor:
             self._openai_client = AsyncOpenAI(api_key=getenv("OPENAI_API_KEY"))
         return self._openai_client
 
-    def _render_page_to_base64(self, page: fitz.Page) -> str:
-        """Render a PDF page to a base64-encoded PNG image."""
-        pix = page.get_pixmap(dpi=self.dpi)
-        png_bytes = pix.tobytes("png")
-        return base64.b64encode(png_bytes).decode("utf-8")
+    def _render_image_to_base64(self, image) -> str:
+        """Render a PIL image to a base64-encoded PNG image."""
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
 
     async def _analyze_slide_image(self, base64_image: str, page_num: int) -> dict | None:
         """Analyze slide image using GPT-4o Vision."""
@@ -171,40 +172,40 @@ class SlideProcessor:
         """
         print(f"Processing: {filename}")
 
-        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-            total_pages = len(doc)
-            print(f"Found {total_pages} pages")
+        images = convert_from_bytes(pdf_bytes, dpi=self.dpi)
+        total_pages = len(images)
+        print(f"Found {total_pages} pages")
 
-            for page_num, page in enumerate(doc, start=1):
-                start_time = time.time()
-                print(f"  Processing Page {page_num}/{total_pages}...", end=" ", flush=True)
+        for page_num, image in enumerate(images, start=1):
+            start_time = time.time()
+            print(f"  Processing Page {page_num}/{total_pages}...", end=" ", flush=True)
 
-                # Render page to image
-                base64_image = self._render_page_to_base64(page)
+            # Render page to image
+            base64_image = self._render_image_to_base64(image)
 
-                # Analyze with vision
-                analysis = await self._analyze_slide_image(base64_image, page_num)
-                text = self._extract_text_from_analysis(analysis)
+            # Analyze with vision
+            analysis = await self._analyze_slide_image(base64_image, page_num)
+            text = self._extract_text_from_analysis(analysis)
 
-                # Skip if no content extracted
-                if not text.strip():
-                    print("Skipped (no content)")
-                    continue
+            # Skip if no content extracted
+            if not text.strip():
+                print("Skipped (no content)")
+                continue
 
-                # Create embedding
-                embedding = await self._get_embedding(text)
+            # Create embedding
+            embedding = await self._get_embedding(text)
 
-                elapsed = time.time() - start_time
-                print(f"Done ({elapsed:.2f}s)")
+            elapsed = time.time() - start_time
+            print(f"Done ({elapsed:.2f}s)")
 
-                yield {
-                    "session_info": session_info,
-                    "text": text,
-                    "timestamp": f"Slide {page_num}",
-                    "embedding": embedding,
-                    "page_num": page_num,
-                    "total_pages": total_pages
-                }
+            yield {
+                "session_info": session_info,
+                "text": text,
+                "timestamp": f"Slide {page_num}",
+                "embedding": embedding,
+                "page_num": page_num,
+                "total_pages": total_pages
+            }
 
     async def process_from_bytes(
         self,
