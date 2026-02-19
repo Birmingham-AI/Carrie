@@ -58,10 +58,10 @@ async def start_voice_trace(request: VoiceTraceStartRequest, req: Request):
     Start a new voice trace session.
     Called when voice mode connects.
     """
-    print(f"[VOICE TRACE] Start requested. LANGFUSE_ENABLED={LANGFUSE_ENABLED}")
+    logger.info(f"[VOICE TRACE] Start requested. LANGFUSE_ENABLED={LANGFUSE_ENABLED}")
 
     if not LANGFUSE_ENABLED:
-        print("[VOICE TRACE] Langfuse disabled")
+        logger.info("[VOICE TRACE] Langfuse disabled")
         return VoiceTraceStartResponse(trace_id="", enabled=False)
 
     user_id = req.client.host if req.client else "unknown"
@@ -70,7 +70,7 @@ async def start_voice_trace(request: VoiceTraceStartRequest, req: Request):
         user_id=user_id
     )
 
-    print(f"[VOICE TRACE] Created trace: {trace_id}")
+    logger.info(f"[VOICE TRACE] Created trace: {trace_id}")
     return VoiceTraceStartResponse(trace_id=trace_id, enabled=True)
 
 

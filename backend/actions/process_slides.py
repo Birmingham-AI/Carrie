@@ -9,13 +9,14 @@ Usage (Python):
 
     processor = SlideProcessor()
     async for chunk in processor.stream_from_bytes(pdf_bytes, "slides.pdf", "Nov 2024 Meetup"):
-        print(chunk)
+        logger.info(chunk)
 """
 
 import argparse
 import asyncio
 import base64
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -30,6 +31,8 @@ from openai import AsyncOpenAI
 load_dotenv(join(dirname(dirname(dirname(__file__))), ".env"))
 
 from clients import get_embedding
+
+logger = logging.getLogger(__name__)
 
 EMBEDDINGS_DIR = "embeddings"
 
@@ -119,10 +122,10 @@ class SlideProcessor:
             return json.loads(response_text.strip())
 
         except json.JSONDecodeError as e:
-            print(f"    Warning: Could not parse JSON for page {page_num}: {e}")
+            logger.warning(f"    Warning: Could not parse JSON for page {page_num}: {e}")
             return None
         except Exception as e:
-            print(f"    Warning: Vision analysis failed for page {page_num}: {e}")
+            logger.warning(f"    Warning: Vision analysis failed for page {page_num}: {e}")
             return None
 
     def _extract_text_from_analysis(self, analysis: dict | None) -> str:
@@ -169,15 +172,15 @@ class SlideProcessor:
                 - page_num: current page number
                 - total_pages: total number of pages
         """
-        print(f"Processing: {filename}")
+        logger.info(f"Processing: {filename}")
 
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
             total_pages = len(doc)
-            print(f"Found {total_pages} pages")
+            logger.info(f"Found {total_pages} pages")
 
             for page_num, page in enumerate(doc, start=1):
                 start_time = time.time()
-                print(f"  Processing Page {page_num}/{total_pages}...", end=" ", flush=True)
+                logger.info(f"  Processing Page {page_num}/{total_pages}...")
 
                 # Render page to image
                 base64_image = self._render_page_to_base64(page)
@@ -188,14 +191,14 @@ class SlideProcessor:
 
                 # Skip if no content extracted
                 if not text.strip():
-                    print("Skipped (no content)")
+                    logger.info("Skipped (no content)")
                     continue
 
                 # Create embedding
                 embedding = await self._get_embedding(text)
 
                 elapsed = time.time() - start_time
-                print(f"Done ({elapsed:.2f}s)")
+                logger.info(f"Done ({elapsed:.2f}s)")
 
                 yield {
                     "session_info": session_info,
@@ -271,9 +274,9 @@ class SlideProcessor:
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(embedded_chunks, f, indent=2, ensure_ascii=False)
 
-            print(f"\nSaved to: {output_path}")
+            logger.info(f"\nSaved to: {output_path}")
 
-        print(f"Total slides processed: {len(embedded_chunks)}")
+        logger.info(f"Total slides processed: {len(embedded_chunks)}")
 
         return embedded_chunks
 
@@ -349,12 +352,12 @@ async def async_main():
                 with open(output_path, "w", encoding="utf-8") as f:
                     json.dump(chunks, f, indent=2, ensure_ascii=False)
 
-        print(f"\nTotal slides processed: {len(chunks)}")
+        logger.info(f"\nTotal slides processed: {len(chunks)}")
         if not args.no_save:
-            print(f"Saved to: {output_path}")
+            logger.info(f"Saved to: {output_path}")
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         raise SystemExit(1)
 
 
