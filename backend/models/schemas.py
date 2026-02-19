@@ -1,11 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 
 
 class QuestionRequest(BaseModel):
-    question: str
-    messages: Optional[List[Dict[str, str]]] = []
-    enable_web_search: Optional[bool] = True
+    question: str = Field(..., max_length=4000)
+    messages: List[Dict[str, str]] = Field(default_factory=list, max_length=50)
+    enable_web_search: bool = True
 
 
 class SearchResult(BaseModel):

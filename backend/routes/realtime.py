@@ -5,6 +5,7 @@ This module provides endpoints for establishing WebRTC connections
 to OpenAI's Realtime API for speech-to-speech interaction.
 """
 
+import logging
 import httpx
 from os import getenv
 from pathlib import Path
@@ -13,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Request
 from middleware import rate_limiter
 
 router = APIRouter(prefix="/v1/realtime", tags=["realtime"])
+logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = getenv("OPENAI_API_KEY")
 
@@ -137,10 +139,10 @@ async def create_realtime_session(request: Request):
         )
 
         if response.status_code != 200:
-            error_detail = response.text
+            logger.error(f"Error details: status={response.status_code}, response={response.text}")
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"Failed to create realtime session: {error_detail}"
+                detail="Internal server error"
             )
 
         return response.json()

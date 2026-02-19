@@ -60,5 +60,5 @@ async def submit_feedback(feedback: FeedbackRequest):
         )
 
     except Exception as e:
-        logger.error(f"Failed to record feedback: {e}")
-        raise HTTPException(status_code=500, detail="Failed to record feedback")
+        logger.error(f"Error details: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
